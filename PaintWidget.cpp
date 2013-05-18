@@ -14,16 +14,32 @@ using std::sqrt;
 
 #include <GL/glu.h>
 
-PaintWidget::PaintWidget( QWidget* parent ) : QGLWidget( parent ), clickPoint( 0, 0 ), curPoint( 0, 0 ), color( 255, 0, 0 ){
+#define PIX_COMPONENTS 3
+
+typedef struct PixelInfo{
+	char info[PIX_COMPONENTS];
+}PixelInfo;
+
+PaintWidget::PaintWidget( QWidget* parent ) : QGLWidget( parent ), clickPoint( 0, 0 ), curPoint( 0, 0 ), color( 0, 0, 0 ){
 	//setMouseTracking( true );
 	firstDone = false;
+	pencilActive = false;
+	nClicks = 0;
 	selectedTool_ = PaintWindow::Line;
-	pixelInfo = new unsigned int[ PaintWindow::width() * PaintWindow::height() ];
+	pixelInfo = new PixelInfo[ PaintWindow::width() * PaintWindow::height() ];
+	tempInfo = new PixelInfo[ PaintWindow::width() * PaintWindow::height() ];
+	splinePoints = new QPoint[4];
 }
 
 PaintWidget::~PaintWidget(){
 	if( pixelInfo != 0 ){
 		delete[] pixelInfo;
+	}
+	if( splinePoints != 0 ){
+		delete[] splinePoints;
+	}
+	if( tempInfo != 0 ){
+		delete[] tempInfo;
 	}
 }
 
@@ -33,6 +49,7 @@ int PaintWidget::selectedTool() const{
 
 void PaintWidget::setSelectedTool( int t ){
 	selectedTool_ = t;
+	nClicks = 0;
 }
 
 void PaintWidget::drawLine( int x1, int y1, int x2, int y2 ){
@@ -139,12 +156,28 @@ void PaintWidget::drawEllipse( int xC, int yC, int rX, int rY ){
 	}
 }
 
+void PaintWidget::drawSpline( QPoint* points ){
+	double time;
+	int x, y;
+	
+	for( time = 0; time <= 1.0; time += 0.001 ){
+		x = pow( 1 - time, 3 ) * points[0].x() + 
+			3 * time * pow( 1 - time, 2 ) * points[1].x() +
+			3 * pow( time, 2 ) * ( 1- time ) * points[2].x() +
+			pow( time, 3 ) * points[3].x();
+		y = pow( 1 - time, 3 ) * points[0].y() +
+			3 * time * pow( 1 - time, 2 ) * points[1].y() +
+			3 * pow( time, 2 ) * ( 1 - time ) * points[2].y() +
+			pow( time, 3 ) * points[3].y();
+		painter.drawPoint( x, y );
+	}
+}
+
 void PaintWidget::initializeGL(){
 	glClearColor( 1, 1, 1, 0.0 );
 	glMatrixMode( GL_PROJECTION );
 	gluOrtho2D( 0, PaintWindow::width(), 0, PaintWindow::height() );
 	glClear( GL_COLOR_BUFFER_BIT );
-	glColor3f( 0, 0, 1 );
 }
 
 void PaintWidget::resizeGL( int w, int h ){
@@ -160,9 +193,11 @@ void PaintWidget::resizeGL( int w, int h ){
 
 void PaintWidget::paintGL(){
 	if( firstDone ){
-		painter.begin( this );
-		painter.setPen( color );
-		glDrawPixels( PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+		if( !pencilActive ){
+			painter.begin( this );
+			painter.setPen( color );
+			glDrawPixels( PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+		}
 		switch( selectedTool_ ){
 			case PaintWindow::Line:
 				drawLine( clickPoint.x(), clickPoint.y(), curPoint.x(), curPoint.y() );
@@ -173,8 +208,22 @@ void PaintWidget::paintGL(){
 			case PaintWindow::Ellipse:
 				drawEllipse( clickPoint.x(), clickPoint.y(), rx, ry );
 				break;
+			case PaintWindow::Spline:
+				if( nClicks < 2 ){
+					glDrawPixels( PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, tempInfo );
+				}
+				drawSpline( splinePoints );
+				break;
+			case PaintWindow::Pencil:
+				drawLine( clickPoint.x(), clickPoint.y(), curPoint.x(), curPoint.y() );
+				clickPoint.setX( curPoint.x() );
+				clickPoint.setY( curPoint.y() );
+				pencilActive = true;
+				break;
 		}
-		painter.end();
+		if( selectedTool_ != PaintWindow::Pencil ){
+			painter.end();
+		}
 	}
 }
 
@@ -184,13 +233,51 @@ void PaintWidget::mousePressEvent( QMouseEvent* event ){
 		firstDone = true;
 		clickPoint.setX( event -> x() );
 		clickPoint.setY( event -> y() );
-		glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+		switch( selectedTool_ ){
+			case PaintWindow::Spline:
+				switch( nClicks ){
+					case 0:
+						glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+						for( int i = 0; i < 4; i++ ){
+							splinePoints[i].setX( event -> x() );
+							splinePoints[i].setY( event -> y() );
+						}
+						break;
+					case 1:
+						for( int i = 1; i < 3; i++ ){
+							splinePoints[i].setX( event -> x() );
+							splinePoints[i].setY( event -> y() );
+						}
+						updateGL();
+						glDrawPixels( PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+						break;
+					case 2:
+						splinePoints[2].setX( event -> x() );
+						splinePoints[2].setY( event -> y() );
+						updateGL();
+						break;
+				}
+				glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, tempInfo );
+				break;
+			default:
+				glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+				break;
+		}
 	}
 }
 
 void PaintWidget::mouseReleaseEvent( QMouseEvent* event ){
 	if( event -> button() == Qt::LeftButton ){
 		clicked = false;
+		switch( selectedTool_ ){
+			case PaintWindow::Spline:
+				nClicks = ( nClicks + 1 ) % 3;
+				break;
+			case PaintWindow::Pencil:
+				pencilActive = false;
+				painter.end();
+				break;
+		}
 	}
 }
 
@@ -204,6 +291,22 @@ void PaintWidget::mouseMoveEvent( QMouseEvent* event ){
 		case PaintWindow::Ellipse:
 			rx = abs( clickPoint.x() - curPoint.x() );
 			ry = abs( clickPoint.y() - curPoint.y() );
+			break;
+		case PaintWindow::Spline:
+			switch( nClicks ){
+				case 0:
+					splinePoints[3].setX( event -> x() );
+					splinePoints[3].setY( event -> y() );
+					break;
+				case 1:
+					splinePoints[1].setX( event -> x() );
+					splinePoints[1].setY( event -> y() );
+					break;
+				case 2:
+					splinePoints[2].setX( event -> x() );
+					splinePoints[2].setY( event -> y() );
+					break;
+			}
 			break;
 	}
 	updateGL();

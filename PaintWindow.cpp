@@ -51,6 +51,14 @@ void PaintWindow::ellipseSelected(){
 	emit changeTool( PaintWindow::Ellipse );
 }
 
+void PaintWindow::splineSelected(){
+	emit changeTool( PaintWindow::Spline );
+}
+
+void PaintWindow::pencilSelected(){
+	emit changeTool( PaintWindow::Pencil );
+}
+
 void PaintWindow::createMainToolBar(){
 	addToolBar( Qt::LeftToolBarArea, mainToolBar );
 	
@@ -77,4 +85,20 @@ void PaintWindow::createMainToolBar(){
 	connect( ellipseToolAction, SIGNAL( triggered() ), this, SLOT( ellipseSelected() ) );
 	mainToolBar -> addWidget( ellipseToolButton );
 	ellipseToolButton -> setAutoRaise( false );
+	
+	splineToolButton = new QToolButton( mainToolBar );
+	splineToolAction = new QAction( QIcon( "./Icons/SplineIcon.png" ), tr( "Spline" ), this );
+	splineToolAction -> setStatusTip( tr( "Draw spline" ) );
+	splineToolButton -> setDefaultAction( splineToolAction );
+	connect( splineToolAction, SIGNAL( triggered() ), this, SLOT( splineSelected() ) );
+	mainToolBar -> addWidget( splineToolButton );
+	splineToolButton -> setAutoRaise( false );
+	
+	pencilToolButton = new QToolButton( mainToolBar );
+	pencilToolAction = new QAction( QIcon( "./Icons/PencilIcon.png" ), tr( "Pencil" ), this );
+	pencilToolAction -> setStatusTip( tr( "Pencil tool" ) );
+	pencilToolButton -> setDefaultAction( pencilToolAction );
+	connect( pencilToolAction, SIGNAL( triggered() ), this, SLOT( pencilSelected() ) );
+	mainToolBar -> addWidget( pencilToolButton );
+	pencilToolButton -> setAutoRaise( false );
 }

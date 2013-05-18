@@ -15,7 +15,9 @@ class PaintWindow : public QMainWindow{
 		enum ToolNum{
 			Line,
 			Circle,
-			Ellipse
+			Ellipse,
+			Spline,
+			Pencil
 		};
 	
 		PaintWindow();
@@ -28,6 +30,8 @@ class PaintWindow : public QMainWindow{
 		void lineSelected();
 		void circleSelected();
 		void ellipseSelected();
+		void splineSelected();
+		void pencilSelected();
 		
 	private:
 		PaintWidget* paintWidget;
@@ -35,9 +39,13 @@ class PaintWindow : public QMainWindow{
 		QToolButton* lineToolButton;
 		QToolButton* circleToolButton;
 		QToolButton* ellipseToolButton;
+		QToolButton* splineToolButton;
+		QToolButton* pencilToolButton;
 		QAction* lineToolAction;
 		QAction* circleToolAction;
 		QAction* ellipseToolAction;
+		QAction* splineToolAction;
+		QAction* pencilToolAction;
 		static int width_;
 		static int height_;
 		
