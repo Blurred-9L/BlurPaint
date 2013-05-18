@@ -19,7 +19,8 @@ class PaintWindow : public QMainWindow{
 			Spline,
 			Pencil,
 			Eraser,
-			Spray
+			Spray,
+			Polygon
 		};
 	
 		PaintWindow();
@@ -36,10 +37,17 @@ class PaintWindow : public QMainWindow{
 		void pencilSelected();
 		void eraserSelected();
 		void spraySelected();
+		void polygonSelected();
+		void triangleSelected();
+		void squareSelected();
+		void pentagonSelected();
+		void hexagonSelected();
+		void heptagonSelected();
 		
 	private:
 		PaintWidget* paintWidget;
 		QToolBar* mainToolBar;
+		QToolBar* polygonToolBar;
 		QToolButton* lineToolButton;
 		QToolButton* circleToolButton;
 		QToolButton* ellipseToolButton;
@@ -47,6 +55,11 @@ class PaintWindow : public QMainWindow{
 		QToolButton* pencilToolButton;
 		QToolButton* eraserToolButton;
 		QToolButton* sprayToolButton;
+		QToolButton* triangleToolButton;
+		QToolButton* squareToolButton;
+		QToolButton* pentagonToolButton;
+		QToolButton* hexagonToolButton;
+		QToolButton* heptagonToolButton;
 		QAction* lineToolAction;
 		QAction* circleToolAction;
 		QAction* ellipseToolAction;
@@ -54,13 +67,20 @@ class PaintWindow : public QMainWindow{
 		QAction* pencilToolAction;
 		QAction* eraserToolAction;
 		QAction* sprayToolAction;
+		QAction* triangleToolAction;
+		QAction* squareToolAction;
+		QAction* pentagonToolAction;
+		QAction* hexagonToolAction;
+		QAction* heptagonToolAction;
 		static int width_;
 		static int height_;
 		
 		void createMainToolBar();
+		void createPolygonToolBar();
 		
 	signals:
 		void changeTool( int );
+		void changePolygonSides( int );
 };
 
 #endif //PAINT_WINDOW_H

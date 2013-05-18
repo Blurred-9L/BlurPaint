@@ -18,7 +18,12 @@ PaintWindow::PaintWindow(){
 	mainToolBar -> setMovable( false );
 	createMainToolBar();
 	
+	polygonToolBar = new QToolBar( tr( "Polygons" ), this );
+	polygonToolBar -> setMovable( false );
+	createPolygonToolBar();
+	
 	connect( this, SIGNAL( changeTool( int ) ), paintWidget, SLOT( setSelectedTool( int ) ) );
+	connect( this, SIGNAL( changePolygonSides( int ) ), paintWidget, SLOT( setNSides( int ) ) );
 	
 	resize( width_, height_ );
 }
@@ -65,6 +70,30 @@ void PaintWindow::eraserSelected(){
 
 void PaintWindow::spraySelected(){
 	emit changeTool( PaintWindow::Spray );
+}
+
+void PaintWindow::polygonSelected(){
+	emit changeTool( PaintWindow::Polygon );
+}
+
+void PaintWindow::triangleSelected(){
+	emit changePolygonSides( 3 );
+}
+
+void PaintWindow::squareSelected(){
+	emit changePolygonSides( 4 );
+}
+
+void PaintWindow::pentagonSelected(){
+	emit changePolygonSides( 5 );
+}
+
+void PaintWindow::hexagonSelected(){
+	emit changePolygonSides( 6 );
+}
+
+void PaintWindow::heptagonSelected(){
+	emit changePolygonSides( 7 );
 }
 
 void PaintWindow::createMainToolBar(){
@@ -125,4 +154,53 @@ void PaintWindow::createMainToolBar(){
 	connect( sprayToolAction, SIGNAL( triggered() ), this, SLOT( spraySelected() ) );
 	mainToolBar -> addWidget( sprayToolButton );
 	sprayToolButton -> setAutoRaise( false );
+}
+
+void PaintWindow::createPolygonToolBar(){
+	addToolBar( Qt::RightToolBarArea, polygonToolBar );
+	
+	triangleToolButton = new QToolButton( polygonToolBar );
+	triangleToolAction = new QAction( QIcon( "./Icons/TriangleIcon.png" ), tr( "Triangle" ), this );
+	triangleToolAction -> setStatusTip( tr( "Triangle tool" ) );
+	triangleToolButton -> setDefaultAction( triangleToolAction );
+	connect( triangleToolAction, SIGNAL( triggered() ), this, SLOT( polygonSelected() ) );
+	connect( triangleToolAction, SIGNAL( triggered() ), this, SLOT( triangleSelected() ) );
+	polygonToolBar -> addWidget( triangleToolButton );
+	triangleToolButton -> setAutoRaise( false );
+	
+	squareToolButton = new QToolButton( polygonToolBar );
+	squareToolAction = new QAction( QIcon( "./Icons/SquareIcon.png" ), tr( "Square" ), this );
+	squareToolAction -> setStatusTip( tr( "Square tool" ) );
+	squareToolButton -> setDefaultAction( squareToolAction );
+	connect( squareToolAction, SIGNAL( triggered() ), this, SLOT( polygonSelected() ) );
+	connect( squareToolAction, SIGNAL( triggered() ), this, SLOT( squareSelected() ) );
+	polygonToolBar -> addWidget( squareToolButton );
+	squareToolButton -> setAutoRaise( false );
+	
+	pentagonToolButton = new QToolButton( polygonToolBar );
+	pentagonToolAction = new QAction( QIcon( "./Icons/PentagonIcon.png" ), tr( "Pentagon" ), this );
+	pentagonToolAction -> setStatusTip( tr( "Pentagon tool" ) );
+	pentagonToolButton -> setDefaultAction( pentagonToolAction );
+	connect( pentagonToolAction, SIGNAL( triggered() ), this, SLOT( polygonSelected() ) );
+	connect( pentagonToolAction, SIGNAL( triggered() ), this, SLOT( pentagonSelected() ) );
+	polygonToolBar -> addWidget( pentagonToolButton );
+	pentagonToolButton -> setAutoRaise( false );
+	
+	hexagonToolButton = new QToolButton( polygonToolBar );
+	hexagonToolAction = new QAction( QIcon( "./Icons/HexagonIcon.png" ), tr( "Hexagon" ), this );
+	hexagonToolAction -> setStatusTip( tr( "Hexagon tool" ) );
+	hexagonToolButton -> setDefaultAction( hexagonToolAction );
+	connect( hexagonToolAction, SIGNAL( triggered() ), this, SLOT( polygonSelected() ) );
+	connect( hexagonToolAction, SIGNAL( triggered() ), this, SLOT( hexagonSelected() ) );
+	polygonToolBar -> addWidget( hexagonToolButton );
+	hexagonToolButton -> setAutoRaise( false );
+	
+	heptagonToolButton = new QToolButton( polygonToolBar );
+	heptagonToolAction = new QAction( QIcon( "./Icons/HeptagonIcon.png" ), tr( "Heptagon" ), this );
+	heptagonToolAction -> setStatusTip( tr( "Heptagon tool" ) );
+	heptagonToolButton -> setDefaultAction( heptagonToolAction );
+	connect( heptagonToolAction, SIGNAL( triggered() ), this, SLOT( polygonSelected() ) );
+	connect( heptagonToolAction, SIGNAL( triggered() ), this, SLOT( heptagonSelected() ) );
+	polygonToolBar -> addWidget( heptagonToolButton );
+	heptagonToolButton -> setAutoRaise( false );
 }

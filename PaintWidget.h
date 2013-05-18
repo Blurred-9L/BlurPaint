@@ -17,14 +17,17 @@ class PaintWidget : public QGLWidget{
 		PaintWidget( QWidget* parent = 0 );
 		~PaintWidget();
 		int selectedTool() const;
+		int nSides() const;
 		void drawLine( int x1, int y1, int x2, int y2 );
 		void drawCircle( int xC, int yC, int r );
 		void drawEllipse( int xC, int yC, int rX, int rY );
 		void drawSpline( QPoint* points );
 		void sprayPixels( int x, int y );
+		void drawPolygon( int xC, int yC, int r, float curAngle, int sides );
 		
 	public slots:
 		void setSelectedTool( int t );
+		void setNSides( int n );
 
 	protected:
 		void initializeGL();
@@ -37,10 +40,12 @@ class PaintWidget : public QGLWidget{
 		
 	private:
 		int selectedTool_;
+		int nSides_;
 		int radius;
 		int rx;
 		int ry;
 		int nClicks;
+		double polygonAngle;
 		bool firstDone;
 		bool pencilActive;
 		bool eraserActive;
@@ -58,6 +63,7 @@ class PaintWidget : public QGLWidget{
 		
 		void putCirclePixels( int x, int y, int xC, int yC );
 		void putEllipsePixels( int x, int y, int xC, int yC );
+		QPoint* getVertex( int xC, int yC, int r, float angle );
 };
 
 #endif //PAINT_WIDGET_H

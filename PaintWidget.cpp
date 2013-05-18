@@ -13,6 +13,9 @@
 using std::abs;
 using std::pow;
 using std::sqrt;
+using std::atan2;
+using std::sin;
+using std::cos;
 #include <cstdlib>
 using std::srand;
 using std::rand;
@@ -35,6 +38,7 @@ PaintWidget::PaintWidget( QWidget* parent ) : QGLWidget( parent ), clickPoint( 0
 	eraserActive = false;
 	sprayActive = false;
 	nClicks = 0;
+	polygonAngle = 0.0;
 	selectedTool_ = PaintWindow::Line;
 	pixelInfo = new PixelInfo[ PaintWindow::width() * PaintWindow::height() ];
 	tempInfo = new PixelInfo[ PaintWindow::width() * PaintWindow::height() ];
@@ -62,6 +66,14 @@ int PaintWidget::selectedTool() const{
 void PaintWidget::setSelectedTool( int t ){
 	selectedTool_ = t;
 	nClicks = 0;
+}
+
+int PaintWidget::nSides() const{
+	return nSides_;
+}
+
+void PaintWidget::setNSides( int n ){
+	nSides_ = n;
 }
 
 void PaintWidget::drawLine( int x1, int y1, int x2, int y2 ){
@@ -192,6 +204,25 @@ void PaintWidget::sprayPixels( int x, int y ){
 	painter.drawPoint( x + ( -10 + rand() % 21 ), y + ( -10 + rand() % 21 ) );
 }
 
+void PaintWidget::drawPolygon( int xC, int yC, int r, float curAngle, int sides ){
+	int angle;
+	int i;
+	QPoint** vertexes = new QPoint*[sides];
+	
+	angle = 360 / sides;
+	for( i = 0; i < sides; i++ ){
+		vertexes[i] = getVertex( xC, yC, r, curAngle );
+		curAngle += angle;
+	}
+	for( i = 0; i < sides; i++ ){
+		drawLine( vertexes[i] -> x(), vertexes[i] -> y(), vertexes[(i+1)%sides] -> x(), vertexes[(i+1)%sides] -> y() );
+	}
+	for( i = 0; i < sides; i++ ){
+		delete vertexes[i];
+	}
+	delete[] vertexes;
+}
+
 void PaintWidget::initializeGL(){
 	glClearColor( 1, 1, 1, 0.0 );
 	glMatrixMode( GL_PROJECTION );
@@ -258,6 +289,9 @@ void PaintWidget::paintGL(){
 			case PaintWindow::Spray:
 				sprayPixels( curPoint.x(), curPoint.y() );
 				sprayActive = true;
+				break;
+			case PaintWindow::Polygon:
+				drawPolygon( clickPoint.x(), clickPoint.y(), radius, polygonAngle, nSides_ );
 				break;
 		}
 		if( !pencilActive && !eraserActive && !sprayActive ){
@@ -372,6 +406,10 @@ void PaintWidget::mouseMoveEvent( QMouseEvent* event ){
 					break;
 			}
 			break;
+		case PaintWindow::Polygon:
+			radius = sqrt( pow( ( clickPoint.x() - curPoint.x() ), 2 ) + pow( clickPoint.y() - curPoint.y(), 2 ) );
+			polygonAngle = ( atan2( clickPoint.y() - curPoint.y(), clickPoint.x() - curPoint.x() ) * 180 ) / M_PI;
+			break;
 	}
 	updateGL();
 }
@@ -401,4 +439,15 @@ void PaintWidget::putEllipsePixels( int x, int y, int xC, int yC ){
 	painter.drawPoint( x + xC, -y + yC );
 	painter.drawPoint( -x + xC, -y + yC );
 	painter.drawPoint( -x + xC, y + yC );
+}
+
+QPoint* PaintWidget::getVertex( int xC, int yC, int r, float angle ){
+	float rads;
+	QPoint* newPoint = new QPoint;
+	
+	rads = 180 / M_PI;
+	newPoint -> setX( xC + ceil( r * cos( angle / rads ) ) );
+	newPoint -> setY( yC + ceil( r * sin( angle / rads ) ) );
+	
+	return newPoint;
 }
