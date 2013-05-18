@@ -17,7 +17,9 @@ class PaintWindow : public QMainWindow{
 			Circle,
 			Ellipse,
 			Spline,
-			Pencil
+			Pencil,
+			Eraser,
+			Spray
 		};
 	
 		PaintWindow();
@@ -32,6 +34,8 @@ class PaintWindow : public QMainWindow{
 		void ellipseSelected();
 		void splineSelected();
 		void pencilSelected();
+		void eraserSelected();
+		void spraySelected();
 		
 	private:
 		PaintWidget* paintWidget;
@@ -41,11 +45,15 @@ class PaintWindow : public QMainWindow{
 		QToolButton* ellipseToolButton;
 		QToolButton* splineToolButton;
 		QToolButton* pencilToolButton;
+		QToolButton* eraserToolButton;
+		QToolButton* sprayToolButton;
 		QAction* lineToolAction;
 		QAction* circleToolAction;
 		QAction* ellipseToolAction;
 		QAction* splineToolAction;
 		QAction* pencilToolAction;
+		QAction* eraserToolAction;
+		QAction* sprayToolAction;
 		static int width_;
 		static int height_;
 		

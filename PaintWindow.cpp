@@ -59,6 +59,14 @@ void PaintWindow::pencilSelected(){
 	emit changeTool( PaintWindow::Pencil );
 }
 
+void PaintWindow::eraserSelected(){
+	emit changeTool( PaintWindow::Eraser );
+}
+
+void PaintWindow::spraySelected(){
+	emit changeTool( PaintWindow::Spray );
+}
+
 void PaintWindow::createMainToolBar(){
 	addToolBar( Qt::LeftToolBarArea, mainToolBar );
 	
@@ -101,4 +109,20 @@ void PaintWindow::createMainToolBar(){
 	connect( pencilToolAction, SIGNAL( triggered() ), this, SLOT( pencilSelected() ) );
 	mainToolBar -> addWidget( pencilToolButton );
 	pencilToolButton -> setAutoRaise( false );
+	
+	eraserToolButton = new QToolButton( mainToolBar );
+	eraserToolAction = new QAction( QIcon( "./Icons/EraserIcon.png" ), tr( "Eraser" ), this );
+	eraserToolAction -> setStatusTip( tr( "Eraser tool" ) );
+	eraserToolButton -> setDefaultAction( eraserToolAction );
+	connect( eraserToolAction, SIGNAL( triggered() ), this, SLOT( eraserSelected() ) );
+	mainToolBar -> addWidget( eraserToolButton );
+	eraserToolButton -> setAutoRaise( false );
+	
+	sprayToolButton = new QToolButton( mainToolBar );
+	sprayToolAction = new QAction( QIcon( "./Icons/SprayIcon.png" ), tr( "Spray" ), this );
+	sprayToolAction -> setStatusTip( tr( "Spray tool" ) );
+	sprayToolButton -> setDefaultAction( sprayToolAction );
+	connect( sprayToolAction, SIGNAL( triggered() ), this, SLOT( spraySelected() ) );
+	mainToolBar -> addWidget( sprayToolButton );
+	sprayToolButton -> setAutoRaise( false );
 }

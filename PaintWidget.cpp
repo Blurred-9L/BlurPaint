@@ -5,12 +5,18 @@
 #include <QPoint>
 #include <QColor>
 #include <QPainter>
+#include <QPen>
+#include <QTimer>
 
 #include <cstdio>
 #include <cmath>
 using std::abs;
 using std::pow;
 using std::sqrt;
+#include <cstdlib>
+using std::srand;
+using std::rand;
+#include <ctime>
 
 #include <GL/glu.h>
 
@@ -20,15 +26,21 @@ typedef struct PixelInfo{
 	char info[PIX_COMPONENTS];
 }PixelInfo;
 
-PaintWidget::PaintWidget( QWidget* parent ) : QGLWidget( parent ), clickPoint( 0, 0 ), curPoint( 0, 0 ), color( 0, 0, 0 ){
-	//setMouseTracking( true );
+PaintWidget::PaintWidget( QWidget* parent ) : QGLWidget( parent ), clickPoint( 0, 0 ), curPoint( 0, 0 ), color( 0, 0, 0 ),
+	bgColor( 255, 255, 255 ){
+
+	srand( std::time( 0 ) );
 	firstDone = false;
 	pencilActive = false;
+	eraserActive = false;
+	sprayActive = false;
 	nClicks = 0;
 	selectedTool_ = PaintWindow::Line;
 	pixelInfo = new PixelInfo[ PaintWindow::width() * PaintWindow::height() ];
 	tempInfo = new PixelInfo[ PaintWindow::width() * PaintWindow::height() ];
 	splinePoints = new QPoint[4];
+	timer = new QTimer( this );
+	connect( timer, SIGNAL( timeout() ), this, SLOT( updateGL() ) );
 }
 
 PaintWidget::~PaintWidget(){
@@ -173,6 +185,13 @@ void PaintWidget::drawSpline( QPoint* points ){
 	}
 }
 
+void PaintWidget::sprayPixels( int x, int y ){
+	painter.drawPoint( x + ( -10 + rand() % 21 ), y + ( -10 + rand() % 21 ) );
+	painter.drawPoint( x + ( -10 + rand() % 21 ), y + ( -10 + rand() % 21 ) );
+	painter.drawPoint( x + ( -10 + rand() % 21 ), y + ( -10 + rand() % 21 ) );
+	painter.drawPoint( x + ( -10 + rand() % 21 ), y + ( -10 + rand() % 21 ) );
+}
+
 void PaintWidget::initializeGL(){
 	glClearColor( 1, 1, 1, 0.0 );
 	glMatrixMode( GL_PROJECTION );
@@ -192,10 +211,20 @@ void PaintWidget::resizeGL( int w, int h ){
 }
 
 void PaintWidget::paintGL(){
+	QPen pen;
+	
 	if( firstDone ){
-		if( !pencilActive ){
+		if( !pencilActive && !eraserActive && !sprayActive ){
 			painter.begin( this );
-			painter.setPen( color );
+			if( selectedTool_ != PaintWindow::Eraser ){
+				pen.setColor( color );
+				pen.setWidth( 0 );
+			}
+			else{
+				pen.setColor( bgColor );
+				pen.setWidth( 10 );
+			}
+			painter.setPen( pen );
 			glDrawPixels( PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 		}
 		switch( selectedTool_ ){
@@ -220,14 +249,26 @@ void PaintWidget::paintGL(){
 				clickPoint.setY( curPoint.y() );
 				pencilActive = true;
 				break;
+			case PaintWindow::Eraser:
+				drawLine( clickPoint.x(), clickPoint.y(), curPoint.x(), curPoint.y() );
+				clickPoint.setX( curPoint.x() );
+				clickPoint.setY( curPoint.y() );
+				eraserActive = true;
+				break;
+			case PaintWindow::Spray:
+				sprayPixels( curPoint.x(), curPoint.y() );
+				sprayActive = true;
+				break;
 		}
-		if( selectedTool_ != PaintWindow::Pencil ){
+		if( !pencilActive && !eraserActive && !sprayActive ){
 			painter.end();
 		}
 	}
 }
 
 void PaintWidget::mousePressEvent( QMouseEvent* event ){
+	QPen pen;
+	
 	if( event -> button() == Qt::LeftButton ){
 		clicked = true;
 		firstDone = true;
@@ -259,6 +300,19 @@ void PaintWidget::mousePressEvent( QMouseEvent* event ){
 				}
 				glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, tempInfo );
 				break;
+			case PaintWindow::Pencil: case PaintWindow::Eraser:
+				glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+				curPoint.setX( event -> x() );
+				curPoint.setY( event -> y() );
+				updateGL();
+				break;
+			case PaintWindow::Spray:
+				glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+				curPoint.setX( event -> x() );
+				curPoint.setY( event -> y() );
+				setMouseTracking( true );
+				timer -> start( 50 );
+				break;
 			default:
 				glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 				break;
@@ -275,6 +329,16 @@ void PaintWidget::mouseReleaseEvent( QMouseEvent* event ){
 				break;
 			case PaintWindow::Pencil:
 				pencilActive = false;
+				painter.end();
+				break;
+			case PaintWindow::Eraser:
+				eraserActive = false;
+				painter.end();
+				break;
+			case PaintWindow::Spray:
+				sprayActive = false;
+				setMouseTracking( false );
+				timer -> stop();
 				painter.end();
 				break;
 		}

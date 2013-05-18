@@ -5,6 +5,7 @@
 #include <QPoint>
 #include <QColor>
 #include <QPainter>
+#include <QTimer>
 
 class PaintWindow;
 struct PixelInfo;
@@ -20,6 +21,7 @@ class PaintWidget : public QGLWidget{
 		void drawCircle( int xC, int yC, int r );
 		void drawEllipse( int xC, int yC, int rX, int rY );
 		void drawSpline( QPoint* points );
+		void sprayPixels( int x, int y );
 		
 	public slots:
 		void setSelectedTool( int t );
@@ -41,6 +43,8 @@ class PaintWidget : public QGLWidget{
 		int nClicks;
 		bool firstDone;
 		bool pencilActive;
+		bool eraserActive;
+		bool sprayActive;
 		bool clicked;
 		PixelInfo* pixelInfo;
 		PixelInfo* tempInfo;
@@ -48,7 +52,9 @@ class PaintWidget : public QGLWidget{
 		QPoint curPoint;
 		QPoint* splinePoints;
 		QColor color;
+		QColor bgColor;
 		QPainter painter;
+		QTimer* timer;
 		
 		void putCirclePixels( int x, int y, int xC, int yC );
 		void putEllipsePixels( int x, int y, int xC, int yC );
