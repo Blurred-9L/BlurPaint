@@ -26,12 +26,22 @@ using std::rand;
 #define PIX_COMPONENTS 3
 
 typedef struct PixelInfo{
-	char info[PIX_COMPONENTS];
+	unsigned char info[PIX_COMPONENTS];
+	
+	bool operator==( PixelInfo& p ){
+		return ( info[0] == p.info[0] && info[1] == p.info[1] && info[2] == p.info[2] );
+	}
+	
+	bool operator!=( PixelInfo& p ){
+		return !( *this == p );
+	}
+	
 }PixelInfo;
 
-PaintWidget::PaintWidget( QWidget* parent ) : QGLWidget( parent ), clickPoint( 0, 0 ), curPoint( 0, 0 ), color( 0, 0, 0 ),
+PaintWidget::PaintWidget( QWidget* parent ) : QGLWidget( parent ), clickPoint( 0, 0 ), curPoint( 0, 0 ), color( 255, 0, 0 ),
 	bgColor( 255, 255, 255 ){
 
+	setMinimumSize( PaintWindow::width(), PaintWindow::height() );
 	srand( std::time( 0 ) );
 	firstDone = false;
 	pencilActive = false;
@@ -76,6 +86,23 @@ void PaintWidget::setNSides( int n ){
 	nSides_ = n;
 }
 
+void PaintWidget::putPixel( int x, int y, const QColor& c ){
+	glColor3f( c.red() / 255.0, c.green() / 255.0, c.blue() / 255.0 );
+	glBegin( GL_POINTS );
+	glVertex2i( x, y );
+	glEnd();
+}
+
+void PaintWidget::putSquare( int x, int y, const QColor& c ){
+	glColor3f( c.red() / 255.0, c.green() / 255.0, c.blue() / 255.0 );
+	glBegin( GL_QUADS );
+	glVertex2i( x - 5, y - 5 );
+	glVertex2i( x - 5, y + 5 );
+	glVertex2i( x + 5, y - 5 );
+	glVertex2i( x + 5, y + 5 );
+	glEnd();
+}
+
 void PaintWidget::drawLine( int x1, int y1, int x2, int y2 ){
 	int dx = abs( x2 - x1 );
 	int dy = abs( y2 - y1 );
@@ -88,7 +115,7 @@ void PaintWidget::drawLine( int x1, int y1, int x2, int y2 ){
 	y = y1;
 	if( dx >= dy ){
 		p = 2 * dy - dx;
-		painter.drawPoint( x, y );
+		( selectedTool_ != PaintWindow::Eraser )? putPixel( x, y, color ) : putSquare( x, y, bgColor );
 		while( x != x2 ){
 			x += addX;
 			if( p < 0 ){
@@ -98,12 +125,12 @@ void PaintWidget::drawLine( int x1, int y1, int x2, int y2 ){
 				y += addY;
 				p += 2 * ( dy - dx );
 			}
-			painter.drawPoint( x, y );
+			( selectedTool_ != PaintWindow::Eraser )? putPixel( x, y, color ) : putSquare( x, y, bgColor );
 		}
 	}
 	else{
 		p = 2 * dx - dy;
-		painter.drawPoint( x, y );
+		( selectedTool_ != PaintWindow::Eraser )? putPixel( x, y, color ) : putSquare( x, y, bgColor );
 		while( y != y2 ){
 			y += addY;
 			if( p < 0 ){
@@ -113,7 +140,7 @@ void PaintWidget::drawLine( int x1, int y1, int x2, int y2 ){
 				x += addX;
 				p += 2 * ( dx - dy );
 			}
-			painter.drawPoint( x, y );
+			( selectedTool_ != PaintWindow::Eraser )? putPixel( x, y, color ) : putSquare( x, y, bgColor );
 		}
 	}
 }
@@ -193,15 +220,15 @@ void PaintWidget::drawSpline( QPoint* points ){
 			3 * time * pow( 1 - time, 2 ) * points[1].y() +
 			3 * pow( time, 2 ) * ( 1 - time ) * points[2].y() +
 			pow( time, 3 ) * points[3].y();
-		painter.drawPoint( x, y );
+		putPixel( x, y, color );
 	}
 }
 
 void PaintWidget::sprayPixels( int x, int y ){
-	painter.drawPoint( x + ( -10 + rand() % 21 ), y + ( -10 + rand() % 21 ) );
-	painter.drawPoint( x + ( -10 + rand() % 21 ), y + ( -10 + rand() % 21 ) );
-	painter.drawPoint( x + ( -10 + rand() % 21 ), y + ( -10 + rand() % 21 ) );
-	painter.drawPoint( x + ( -10 + rand() % 21 ), y + ( -10 + rand() % 21 ) );
+	putPixel( x + ( -10 + rand() % 21 ), y + ( -10 + rand() % 21 ), color );
+	putPixel( x + ( -10 + rand() % 21 ), y + ( -10 + rand() % 21 ), color );
+	putPixel( x + ( -10 + rand() % 21 ), y + ( -10 + rand() % 21 ), color );
+	putPixel( x + ( -10 + rand() % 21 ), y + ( -10 + rand() % 21 ), color );
 }
 
 void PaintWidget::drawPolygon( int xC, int yC, int r, float curAngle, int sides ){
@@ -247,15 +274,7 @@ void PaintWidget::paintGL(){
 	if( firstDone ){
 		if( !pencilActive && !eraserActive && !sprayActive ){
 			painter.begin( this );
-			if( selectedTool_ != PaintWindow::Eraser ){
-				pen.setColor( color );
-				pen.setWidth( 0 );
-			}
-			else{
-				pen.setColor( bgColor );
-				pen.setWidth( 10 );
-			}
-			painter.setPen( pen );
+			painter.beginNativePainting();
 			glDrawPixels( PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 		}
 		switch( selectedTool_ ){
@@ -293,8 +312,12 @@ void PaintWidget::paintGL(){
 			case PaintWindow::Polygon:
 				drawPolygon( clickPoint.x(), clickPoint.y(), radius, polygonAngle, nSides_ );
 				break;
+			case PaintWindow::Bucket:
+				break;
 		}
 		if( !pencilActive && !eraserActive && !sprayActive ){
+			glFlush();
+			painter.endNativePainting();
 			painter.end();
 		}
 	}
@@ -347,6 +370,10 @@ void PaintWidget::mousePressEvent( QMouseEvent* event ){
 				setMouseTracking( true );
 				timer -> start( 50 );
 				break;
+			case PaintWindow::Bucket:
+				glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+				updateGL();
+				break;
 			default:
 				glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 				break;
@@ -363,16 +390,22 @@ void PaintWidget::mouseReleaseEvent( QMouseEvent* event ){
 				break;
 			case PaintWindow::Pencil:
 				pencilActive = false;
+				glFlush();
+				painter.endNativePainting();
 				painter.end();
 				break;
 			case PaintWindow::Eraser:
 				eraserActive = false;
+				glFlush();
+				painter.endNativePainting();
 				painter.end();
 				break;
 			case PaintWindow::Spray:
 				sprayActive = false;
 				setMouseTracking( false );
 				timer -> stop();
+				glFlush();
+				painter.endNativePainting();
 				painter.end();
 				break;
 		}
@@ -416,29 +449,30 @@ void PaintWidget::mouseMoveEvent( QMouseEvent* event ){
 
 void PaintWidget::paintEvent( QPaintEvent* event ){
 	painter.begin( this );
-	painter.setPen( color );
+	painter.beginNativePainting();
 	if( not firstDone ){
 		glInit();
 	}
+	painter.endNativePainting();
 	painter.end();
 }
 
 void PaintWidget::putCirclePixels( int x, int y, int xC, int yC ){
-	painter.drawPoint( x + xC, y + yC );
-	painter.drawPoint( y + xC, x + yC );
-	painter.drawPoint( y + xC, -x + yC );
-	painter.drawPoint( x + xC, -y + yC );
-	painter.drawPoint( -x + xC, -y + yC );
-	painter.drawPoint( -y + xC, -x + yC );
-	painter.drawPoint( -y + xC, x + yC );
-	painter.drawPoint( -x + xC, y + yC );
+	putPixel( x + xC, y + yC, color );
+	putPixel( y + xC, x + yC, color );
+	putPixel( y + xC, -x + yC, color );
+	putPixel( x + xC, -y + yC, color );
+	putPixel( -x + xC, -y + yC, color );
+	putPixel( -y + xC, -x + yC, color );
+	putPixel( -y + xC, x + yC, color );
+	putPixel( -x + xC, y + yC, color );
 }
 
 void PaintWidget::putEllipsePixels( int x, int y, int xC, int yC ){
-	painter.drawPoint( x + xC, y + yC );
-	painter.drawPoint( x + xC, -y + yC );
-	painter.drawPoint( -x + xC, -y + yC );
-	painter.drawPoint( -x + xC, y + yC );
+	putPixel( x + xC, y + yC, color );
+	putPixel( x + xC, -y + yC, color );
+	putPixel( -x + xC, -y + yC, color );
+	putPixel( -x + xC, y + yC, color );
 }
 
 QPoint* PaintWidget::getVertex( int xC, int yC, int r, float angle ){

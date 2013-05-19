@@ -20,7 +20,8 @@ class PaintWindow : public QMainWindow{
 			Pencil,
 			Eraser,
 			Spray,
-			Polygon
+			Polygon,
+			Bucket
 		};
 	
 		PaintWindow();
@@ -43,6 +44,7 @@ class PaintWindow : public QMainWindow{
 		void pentagonSelected();
 		void hexagonSelected();
 		void heptagonSelected();
+		void bucketSelected();
 		
 	private:
 		PaintWidget* paintWidget;
@@ -60,6 +62,7 @@ class PaintWindow : public QMainWindow{
 		QToolButton* pentagonToolButton;
 		QToolButton* hexagonToolButton;
 		QToolButton* heptagonToolButton;
+		QToolButton* bucketToolButton;
 		QAction* lineToolAction;
 		QAction* circleToolAction;
 		QAction* ellipseToolAction;
@@ -72,6 +75,7 @@ class PaintWindow : public QMainWindow{
 		QAction* pentagonToolAction;
 		QAction* hexagonToolAction;
 		QAction* heptagonToolAction;
+		QAction* bucketToolAction;
 		static int width_;
 		static int height_;
 		

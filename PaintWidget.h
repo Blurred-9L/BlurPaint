@@ -18,6 +18,8 @@ class PaintWidget : public QGLWidget{
 		~PaintWidget();
 		int selectedTool() const;
 		int nSides() const;
+		void putPixel( int x, int y, const QColor& c );
+		void putSquare( int x, int y, const QColor& c );
 		void drawLine( int x1, int y1, int x2, int y2 );
 		void drawCircle( int xC, int yC, int r );
 		void drawEllipse( int xC, int yC, int rX, int rY );

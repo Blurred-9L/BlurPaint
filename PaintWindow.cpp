@@ -24,8 +24,6 @@ PaintWindow::PaintWindow(){
 	
 	connect( this, SIGNAL( changeTool( int ) ), paintWidget, SLOT( setSelectedTool( int ) ) );
 	connect( this, SIGNAL( changePolygonSides( int ) ), paintWidget, SLOT( setNSides( int ) ) );
-	
-	resize( width_, height_ );
 }
 
 int PaintWindow::width(){
@@ -74,6 +72,10 @@ void PaintWindow::spraySelected(){
 
 void PaintWindow::polygonSelected(){
 	emit changeTool( PaintWindow::Polygon );
+}
+
+void PaintWindow::bucketSelected(){
+	emit changeTool( PaintWindow::Bucket );
 }
 
 void PaintWindow::triangleSelected(){
@@ -154,6 +156,14 @@ void PaintWindow::createMainToolBar(){
 	connect( sprayToolAction, SIGNAL( triggered() ), this, SLOT( spraySelected() ) );
 	mainToolBar -> addWidget( sprayToolButton );
 	sprayToolButton -> setAutoRaise( false );
+	
+	bucketToolButton = new QToolButton( mainToolBar );
+	bucketToolAction = new QAction( QIcon( "./Icons/FillIcon.png" ), tr( "Fill Bucket" ), this );
+	bucketToolAction -> setStatusTip( tr( "Bucket tool" ) );
+	bucketToolButton -> setDefaultAction( bucketToolAction );
+	connect( bucketToolAction, SIGNAL( triggered() ), this, SLOT( bucketSelected() ) );
+	mainToolBar -> addWidget( bucketToolButton );
+	bucketToolButton -> setAutoRaise( false );
 }
 
 void PaintWindow::createPolygonToolBar(){
