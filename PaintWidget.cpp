@@ -250,11 +250,44 @@ void PaintWidget::drawPolygon( int xC, int yC, int r, float curAngle, int sides 
 	delete[] vertexes;
 }
 
+void PaintWidget::fillArea( int x, int y, PixelInfo bgcolor, PixelInfo fillcolor ){
+	QColor c( fillcolor.info[0] & 0xFF, fillcolor.info[1] & 0xFF, fillcolor.info[2] & 0xFF );
+	PixelInfo pix = pixelInfo[ ( 500 - y ) * PaintWindow::width() + x ];
+	int i = x;
+	int left, right;
+	
+	if( pix == bgcolor && pix != fillcolor ){
+		while( i >= 0 && pix == bgcolor && pix != fillcolor ){
+			pixelInfo[ ( 500 - y ) * PaintWindow::width() + i ] = fillcolor;
+			i--;
+			pix = pixelInfo[ ( 500 - y ) * PaintWindow::width() + i ];
+		}
+		left = i + 1;
+
+		i = x + 1;
+		pix = pixelInfo[ ( 500 - y ) * PaintWindow::width() + i ];
+		while( i <= PaintWindow::width() && pix == bgcolor && pix != fillcolor ){
+			pixelInfo[ ( 500 - y ) * PaintWindow::width() + i ] = fillcolor;
+			i++;
+			pix = pixelInfo[ ( 500 - y ) * PaintWindow::width() + i ];
+		}
+		right = i - 1;
+	
+		for( i = left; i <= right; i++ ){
+			fillArea( i, y + 1, bgcolor, fillcolor );
+			fillArea( i, y - 1, bgcolor, fillcolor );
+		}
+	}
+}
+
 void PaintWidget::initializeGL(){
 	glClearColor( 1, 1, 1, 0.0 );
 	glMatrixMode( GL_PROJECTION );
 	gluOrtho2D( 0, PaintWindow::width(), 0, PaintWindow::height() );
 	glClear( GL_COLOR_BUFFER_BIT );
+	if( firstDone ){
+		glDrawPixels( PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+	}
 }
 
 void PaintWidget::resizeGL( int w, int h ){
@@ -270,6 +303,7 @@ void PaintWidget::resizeGL( int w, int h ){
 
 void PaintWidget::paintGL(){
 	QPen pen;
+	PixelInfo bg, fill;
 	
 	if( firstDone ){
 		if( !pencilActive && !eraserActive && !sprayActive ){
@@ -313,6 +347,12 @@ void PaintWidget::paintGL(){
 				drawPolygon( clickPoint.x(), clickPoint.y(), radius, polygonAngle, nSides_ );
 				break;
 			case PaintWindow::Bucket:
+				bg = pixelInfo[ ( 500 - clickPoint.y() ) * PaintWindow::width() + clickPoint.x() ];
+				fill.info[0] = color.red();
+				fill.info[1] = color.green();
+				fill.info[2] = color.blue();
+				fillArea( clickPoint.x(), clickPoint.y(), bg, fill );
+				glDrawPixels( PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 				break;
 		}
 		if( !pencilActive && !eraserActive && !sprayActive ){
@@ -321,6 +361,11 @@ void PaintWidget::paintGL(){
 			painter.end();
 		}
 	}
+	/*for( int i = 0; i < 250000; i++ ){
+		if( pixelInfo[i].info[0] == 255 && pixelInfo[i].info[1] != 255 && pixelInfo[i].info[2] != 255 ){
+			printf( "%d %d %d\n", i, i % PaintWindow::width(), i / PaintWindow::height() );
+		}
+	}*/
 }
 
 void PaintWidget::mousePressEvent( QMouseEvent* event ){
@@ -409,6 +454,7 @@ void PaintWidget::mouseReleaseEvent( QMouseEvent* event ){
 				painter.end();
 				break;
 		}
+		glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 	}
 }
 
@@ -450,9 +496,7 @@ void PaintWidget::mouseMoveEvent( QMouseEvent* event ){
 void PaintWidget::paintEvent( QPaintEvent* event ){
 	painter.begin( this );
 	painter.beginNativePainting();
-	if( not firstDone ){
-		glInit();
-	}
+	glInit();
 	painter.endNativePainting();
 	painter.end();
 }

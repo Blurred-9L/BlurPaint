@@ -26,6 +26,7 @@ class PaintWidget : public QGLWidget{
 		void drawSpline( QPoint* points );
 		void sprayPixels( int x, int y );
 		void drawPolygon( int xC, int yC, int r, float curAngle, int sides );
+		void fillArea( int x, int y, PixelInfo bgcolor, PixelInfo fillcolor );
 		
 	public slots:
 		void setSelectedTool( int t );
