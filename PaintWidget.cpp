@@ -453,8 +453,12 @@ void PaintWidget::mouseReleaseEvent( QMouseEvent* event ){
 				painter.endNativePainting();
 				painter.end();
 				break;
+			default:
+				break;
 		}
-		glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+		if( nClicks == 0 ){
+			glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+		}
 	}
 }
 
