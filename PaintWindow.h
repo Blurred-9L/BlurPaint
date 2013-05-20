@@ -5,6 +5,7 @@
 #include <QToolBar>
 #include <QToolButton>
 #include <QAction>
+#include <QButtonGroup>
 
 class PaintWidget;
 
@@ -50,6 +51,7 @@ class PaintWindow : public QMainWindow{
 		PaintWidget* paintWidget;
 		QToolBar* mainToolBar;
 		QToolBar* polygonToolBar;
+		QToolBar* colorToolBar;
 		QToolButton* lineToolButton;
 		QToolButton* circleToolButton;
 		QToolButton* ellipseToolButton;
@@ -63,6 +65,14 @@ class PaintWindow : public QMainWindow{
 		QToolButton* hexagonToolButton;
 		QToolButton* heptagonToolButton;
 		QToolButton* bucketToolButton;
+		QToolButton* blackButton;
+		QToolButton* whiteButton;
+		QToolButton* redButton;
+		QToolButton* greenButton;
+		QToolButton* blueButton;
+		QToolButton* cyanButton;
+		QToolButton* magentaButton;
+		QToolButton* yellowButton;
 		QAction* lineToolAction;
 		QAction* circleToolAction;
 		QAction* ellipseToolAction;
@@ -76,11 +86,13 @@ class PaintWindow : public QMainWindow{
 		QAction* hexagonToolAction;
 		QAction* heptagonToolAction;
 		QAction* bucketToolAction;
+		QButtonGroup* colorButtonGroup;
 		static int width_;
 		static int height_;
 		
 		void createMainToolBar();
 		void createPolygonToolBar();
+		void createColorToolBar();
 		
 	signals:
 		void changeTool( int );

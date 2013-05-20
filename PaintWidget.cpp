@@ -86,6 +86,21 @@ void PaintWidget::setNSides( int n ){
 	nSides_ = n;
 }
 
+void PaintWidget::setColor( int c ){
+	int r, g, b;
+	
+	switch( c ){
+		case BLACK: case WHITE: case RED: case GREEN: case BLUE: case CYAN: case MAGENTA: case YELLOW:
+			r = ( c & 0xFF0000 ) >> 16;
+			g = ( c & 0x00FF00 ) >> 8;
+			b = c & 0x0000FF;
+			color.setRgb( r, g, b );
+			break;
+		default:
+			break;
+	}
+}
+
 void PaintWidget::putPixel( int x, int y, const QColor& c ){
 	glColor3f( c.red() / 255.0, c.green() / 255.0, c.blue() / 255.0 );
 	glBegin( GL_POINTS );

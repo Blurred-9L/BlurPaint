@@ -5,6 +5,7 @@
 #include <QToolBar>
 #include <QToolButton>
 #include <QAction>
+#include <QButtonGroup>
 
 int PaintWindow::width_ = 500;
 int PaintWindow::height_ = 500;
@@ -22,8 +23,14 @@ PaintWindow::PaintWindow(){
 	polygonToolBar -> setMovable( false );
 	createPolygonToolBar();
 	
+	colorButtonGroup = new QButtonGroup( this );
+	colorToolBar = new QToolBar( tr( "Colors" ), this );
+	colorToolBar -> setMovable( false );
+	createColorToolBar();
+	
 	connect( this, SIGNAL( changeTool( int ) ), paintWidget, SLOT( setSelectedTool( int ) ) );
 	connect( this, SIGNAL( changePolygonSides( int ) ), paintWidget, SLOT( setNSides( int ) ) );
+	connect( colorButtonGroup, SIGNAL( buttonClicked( int ) ), paintWidget, SLOT( setColor( int ) ) );
 }
 
 int PaintWindow::width(){
@@ -213,4 +220,56 @@ void PaintWindow::createPolygonToolBar(){
 	connect( heptagonToolAction, SIGNAL( triggered() ), this, SLOT( heptagonSelected() ) );
 	polygonToolBar -> addWidget( heptagonToolButton );
 	heptagonToolButton -> setAutoRaise( false );
+}
+
+void PaintWindow::createColorToolBar(){
+	addToolBar( Qt::BottomToolBarArea, colorToolBar );
+	
+	blackButton = new QToolButton( colorToolBar );
+	blackButton -> setIcon( QIcon( "./Icons/BlackIcon.png" ) );
+	colorToolBar -> addWidget( blackButton );
+	blackButton -> setAutoRaise( false );
+	colorButtonGroup -> addButton( blackButton, BLACK );
+	
+	whiteButton = new QToolButton( colorToolBar );
+	whiteButton -> setIcon( QIcon( "./Icons/WhiteIcon.png" ) );
+	colorToolBar -> addWidget( whiteButton );
+	whiteButton -> setAutoRaise( false );
+	colorButtonGroup -> addButton( whiteButton, WHITE );
+	
+	redButton = new QToolButton( colorToolBar );
+	redButton -> setIcon( QIcon( "./Icons/RedIcon.png" ) );
+	colorToolBar -> addWidget( redButton );
+	redButton -> setAutoRaise( false );
+	colorButtonGroup -> addButton( redButton, RED );
+	
+	greenButton = new QToolButton( colorToolBar );
+	greenButton -> setIcon( QIcon( "./Icons/GreenIcon.png" ) );
+	colorToolBar -> addWidget( greenButton );
+	greenButton -> setAutoRaise( false );
+	colorButtonGroup -> addButton( greenButton, GREEN );
+	
+	blueButton = new QToolButton( colorToolBar );
+	blueButton -> setIcon( QIcon( "./Icons/BlueIcon.png" ) );
+	colorToolBar -> addWidget( blueButton );
+	blueButton -> setAutoRaise( false );
+	colorButtonGroup -> addButton( blueButton, BLUE );
+	
+	cyanButton = new QToolButton( colorToolBar );
+	cyanButton -> setIcon( QIcon( "./Icons/CyanIcon.png" ) );
+	colorToolBar -> addWidget( cyanButton );
+	cyanButton -> setAutoRaise( false );
+	colorButtonGroup -> addButton( cyanButton, CYAN );
+	
+	magentaButton = new QToolButton( colorToolBar );
+	magentaButton -> setIcon( QIcon( "./Icons/MagentaIcon.png" ) );
+	colorToolBar -> addWidget( magentaButton );
+	magentaButton -> setAutoRaise( false );
+	colorButtonGroup -> addButton( magentaButton, MAGENTA );
+	
+	yellowButton = new QToolButton( colorToolBar );
+	yellowButton -> setIcon( QIcon( "./Icons/YellowIcon.png" ) );
+	colorToolBar -> addWidget( yellowButton );
+	yellowButton -> setAutoRaise( false );
+	colorButtonGroup -> addButton( yellowButton, YELLOW );
 }
