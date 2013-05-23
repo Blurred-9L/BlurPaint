@@ -6,6 +6,8 @@
 #include <QToolButton>
 #include <QAction>
 #include <QButtonGroup>
+#include <QMenu>
+#include <QMenuBar>
 
 class PaintWidget;
 
@@ -49,6 +51,7 @@ class PaintWindow : public QMainWindow{
 		
 	private:
 		PaintWidget* paintWidget;
+		QMenu* fileMenu;
 		QToolBar* mainToolBar;
 		QToolBar* polygonToolBar;
 		QToolBar* colorToolBar;
@@ -86,6 +89,10 @@ class PaintWindow : public QMainWindow{
 		QAction* hexagonToolAction;
 		QAction* heptagonToolAction;
 		QAction* bucketToolAction;
+		QAction* openFile;
+		QAction* saveFile;
+		QAction* saveFileAs;
+		QAction* closeWindow;
 		QButtonGroup* colorButtonGroup;
 		static int width_;
 		static int height_;
@@ -93,6 +100,7 @@ class PaintWindow : public QMainWindow{
 		void createMainToolBar();
 		void createPolygonToolBar();
 		void createColorToolBar();
+		void createFileMenu();
 		
 	signals:
 		void changeTool( int );

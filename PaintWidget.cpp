@@ -38,7 +38,7 @@ typedef struct PixelInfo{
 	
 }PixelInfo;
 
-PaintWidget::PaintWidget( QWidget* parent ) : QGLWidget( parent ), clickPoint( 0, 0 ), curPoint( 0, 0 ), color( 255, 0, 0 ),
+PaintWidget::PaintWidget( QWidget* parent ) : QGLWidget( parent ), clickPoint( 0, 0 ), curPoint( 0, 0 ), color( 0, 0, 0 ),
 	bgColor( 255, 255, 255 ){
 
 	setMinimumSize( PaintWindow::width(), PaintWindow::height() );
@@ -306,6 +306,8 @@ void PaintWidget::initializeGL(){
 }
 
 void PaintWidget::resizeGL( int w, int h ){
+	correctPixelPlacement( w, h, PaintWindow::width(), PaintWindow::height() );
+
 	glViewport( 0, 0, w, h );
 	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity();
@@ -376,11 +378,6 @@ void PaintWidget::paintGL(){
 			painter.end();
 		}
 	}
-	/*for( int i = 0; i < 250000; i++ ){
-		if( pixelInfo[i].info[0] == 255 && pixelInfo[i].info[1] != 255 && pixelInfo[i].info[2] != 255 ){
-			printf( "%d %d %d\n", i, i % PaintWindow::width(), i / PaintWindow::height() );
-		}
-	}*/
 }
 
 void PaintWidget::mousePressEvent( QMouseEvent* event ){
@@ -547,4 +544,55 @@ QPoint* PaintWidget::getVertex( int xC, int yC, int r, float angle ){
 	newPoint -> setY( yC + ceil( r * sin( angle / rads ) ) );
 	
 	return newPoint;
+}
+
+void PaintWidget::correctPixelPlacement( int newWidth, int newHeight, int oldWidth, int oldHeight ){
+	PixelInfo** oldMatrix;
+	PixelInfo** newMatrix;
+	
+	oldMatrix = new PixelInfo*[oldHeight];
+	for( int i = 0; i < oldHeight; i++ ){
+		oldMatrix[i] = new PixelInfo[oldWidth];
+		for( int j = 0; j < oldWidth; j++ ){
+			oldMatrix[i][j] = pixelInfo[ i * oldWidth + j ];
+		}
+	}
+	
+	delete[] pixelInfo;
+	pixelInfo = new PixelInfo[ newWidth * newHeight ];
+	newMatrix = new PixelInfo*[newHeight];
+	for( int i = 0; i < newHeight; i++ ){
+		newMatrix[i] = new PixelInfo[newWidth];
+		if( i < oldHeight ){
+			for( int j = 0; j < newWidth; j++ ){
+				if( j < oldWidth ){
+					newMatrix[i][j] = oldMatrix[i][j];
+				}
+				else{
+					newMatrix[i][j].info[0] = newMatrix[i][j].info[1] = newMatrix[i][j].info[2] = 255;
+				}
+			}
+		}
+		else{
+			for( int j = 0; j < newWidth; j++ ){
+				newMatrix[i][j].info[0] = newMatrix[i][j].info[1] = newMatrix[i][j].info[2] = 255;
+			}
+		}
+	}
+	
+	for( int i = 0; i < newHeight; i++ ){
+		for( int j = 0; j < newWidth; j++ ){
+			pixelInfo[ i * newWidth + j ] = newMatrix[i][j];
+		}
+	}
+	
+	for( int i = 0; i < newHeight; i++ ){
+		delete[] newMatrix[i];
+	}
+	delete[] newMatrix;
+	
+	for( int i = 0; i < oldHeight; i++ ){
+		delete[] oldMatrix[i];
+	}
+	delete[] oldMatrix;
 }

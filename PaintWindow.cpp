@@ -6,6 +6,8 @@
 #include <QToolButton>
 #include <QAction>
 #include <QButtonGroup>
+#include <QMenu>
+#include <QMenuBar>
 
 int PaintWindow::width_ = 500;
 int PaintWindow::height_ = 500;
@@ -28,9 +30,12 @@ PaintWindow::PaintWindow(){
 	colorToolBar -> setMovable( false );
 	createColorToolBar();
 	
+	createFileMenu();
+	
 	connect( this, SIGNAL( changeTool( int ) ), paintWidget, SLOT( setSelectedTool( int ) ) );
 	connect( this, SIGNAL( changePolygonSides( int ) ), paintWidget, SLOT( setNSides( int ) ) );
 	connect( colorButtonGroup, SIGNAL( buttonClicked( int ) ), paintWidget, SLOT( setColor( int ) ) );
+	connect( closeWindow, SIGNAL( triggered() ), this, SLOT( close() ) );
 }
 
 int PaintWindow::width(){
@@ -272,4 +277,24 @@ void PaintWindow::createColorToolBar(){
 	colorToolBar -> addWidget( yellowButton );
 	yellowButton -> setAutoRaise( false );
 	colorButtonGroup -> addButton( yellowButton, YELLOW );
+}
+
+void PaintWindow::createFileMenu(){
+	fileMenu = menuBar() -> addMenu( tr( "File" ) );
+	
+	openFile = new QAction( tr( "Open" ), this );
+	openFile -> setStatusTip( tr( "Open file" ) );
+	fileMenu -> addAction( openFile );
+	
+	saveFile = new QAction( tr( "Save" ), this );
+	saveFile -> setStatusTip( tr( "Save file" ) );
+	fileMenu -> addAction( saveFile );
+	
+	saveFileAs = new QAction( tr( "Save as..." ), this );
+	saveFileAs -> setStatusTip( tr( "Save file as..." ) );
+	fileMenu -> addAction( saveFileAs );
+	
+	closeWindow = new QAction( tr( "Quit" ), this );
+	closeWindow -> setStatusTip( tr( "Close application" ) );
+	fileMenu -> addAction( closeWindow );
 }
