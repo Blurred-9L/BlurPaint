@@ -6,6 +6,7 @@
 #include <QColor>
 #include <QPainter>
 #include <QTimer>
+#include <QString>
 
 #define BLACK   0x000000
 #define WHITE   0xFFFFFF
@@ -27,6 +28,12 @@ class PaintWidget : public QGLWidget{
 		~PaintWidget();
 		int selectedTool() const;
 		int nSides() const;
+		int width() const;
+		int height() const;
+		int rowSize() const;
+		void setWidth( int w );
+		void setHeight( int h );
+		void setRowSize( int r );
 		void putPixel( int x, int y, const QColor& c );
 		void putSquare( int x, int y, const QColor& c );
 		void drawLine( int x1, int y1, int x2, int y2 );
@@ -41,6 +48,7 @@ class PaintWidget : public QGLWidget{
 		void setSelectedTool( int t );
 		void setNSides( int n );
 		void setColor( int c );
+		void saveToFile( const QString& filePath );
 
 	protected:
 		void initializeGL();
@@ -54,6 +62,9 @@ class PaintWidget : public QGLWidget{
 	private:
 		int selectedTool_;
 		int nSides_;
+		int width_;
+		int height_;
+		int rowSize_;
 		int radius;
 		int rx;
 		int ry;
@@ -77,7 +88,7 @@ class PaintWidget : public QGLWidget{
 		void putCirclePixels( int x, int y, int xC, int yC );
 		void putEllipsePixels( int x, int y, int xC, int yC );
 		QPoint* getVertex( int xC, int yC, int r, float angle );
-		void fixPixelInfo( int newWidth, int newHeight, int oldWidth, int oldHeight );
+		void fixPixelInfo( int newWidth, int newHeight );
 };
 
 #endif //PAINT_WIDGET_H

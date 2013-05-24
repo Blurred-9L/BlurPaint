@@ -7,6 +7,7 @@
 #include <QPainter>
 #include <QPen>
 #include <QTimer>
+#include <QString>
 
 #include <cstdio>
 #include <cmath>
@@ -20,10 +21,56 @@ using std::cos;
 using std::srand;
 using std::rand;
 #include <ctime>
+#include <fstream>
+using std::fstream;
 
 #include <GL/glu.h>
 
 #define PIX_COMPONENTS 3
+
+typedef struct bmpInfoHeader{
+	long infoHeaderSize; 	//40
+	long width; 			//500
+	long height; 			//500
+	short nPlanes; 			//1
+	short colorDepth; 		//24
+	long compressionMethod; //0
+	long imageSize; 		//500 * 500 * 3
+	long hResolution;		//0
+	long vResolution;		//0
+	long nColors;			//0
+	long nImportantColors;	//0	
+	
+	bmpInfoHeader( long w, long h, long r ){
+		infoHeaderSize = 40;
+		width = w;
+		height = h;
+		nPlanes = 1;
+		colorDepth = 24;
+		compressionMethod = 0;
+		imageSize = height * r;
+		hResolution = 0;
+		vResolution = 0;
+		nColors = 0;
+		nImportantColors = 0;
+	}
+	
+}bmpInfoHeader;
+
+typedef struct bmpHeader{
+	short signature;
+	long fileSize;
+	long reservedField;
+	long offset;
+	
+	bmpHeader( bmpInfoHeader* h ){
+		signature = 0x424D;
+		fileSize = sizeof( bmpHeader ) + sizeof( bmpInfoHeader ) + h -> imageSize;
+		reservedField = 0;
+		offset = sizeof( bmpHeader ) + sizeof( bmpInfoHeader );
+	}
+	
+}bmpHeader;
 
 typedef struct PixelInfo{
 	unsigned char info[PIX_COMPONENTS];
@@ -41,8 +88,13 @@ typedef struct PixelInfo{
 PaintWidget::PaintWidget( QWidget* parent ) : QGLWidget( parent ), clickPoint( 0, 0 ), curPoint( 0, 0 ), color( 0, 0, 0 ),
 	bgColor( 255, 255, 255 ){
 
-	setMinimumSize( PaintWindow::width(), PaintWindow::height() );
-	//setMaximumSize( 600, 600 );
+	width_ = PaintWindow::width();
+	height_ = PaintWindow::height();
+	rowSize_ = width_ * 3;
+	while( rowSize_ % 4 != 0 ){
+		rowSize_++;
+	}
+	setMinimumSize( width_, height_ );
 	srand( std::time( 0 ) );
 	firstDone = false;
 	pencilActive = false;
@@ -51,7 +103,7 @@ PaintWidget::PaintWidget( QWidget* parent ) : QGLWidget( parent ), clickPoint( 0
 	nClicks = 0;
 	polygonAngle = 0.0;
 	selectedTool_ = PaintWindow::Line;
-	pixelInfo = new PixelInfo[ PaintWindow::width() * PaintWindow::height() ];
+	pixelInfo = new PixelInfo[ width_ * height_ ];
 	tempInfo = 0;
 	splinePoints = new QPoint[4];
 	timer = new QTimer( this );
@@ -85,6 +137,33 @@ int PaintWidget::nSides() const{
 
 void PaintWidget::setNSides( int n ){
 	nSides_ = n;
+}
+
+int PaintWidget::width() const{
+	return width_;
+}
+
+int PaintWidget::height() const{
+	return height_;
+}
+
+int PaintWidget::rowSize() const{
+	return rowSize_;
+}
+
+void PaintWidget::setWidth( int w ){
+	width_ = w;
+}
+
+void PaintWidget::setHeight( int h ){
+	height_ = h;
+}
+
+void PaintWidget::setRowSize( int r ){
+	rowSize_ = r;
+	while( rowSize_ % 4 != 0 ){
+		rowSize_++;
+	}
 }
 
 void PaintWidget::setColor( int c ){
@@ -268,24 +347,24 @@ void PaintWidget::drawPolygon( int xC, int yC, int r, float curAngle, int sides 
 
 void PaintWidget::fillArea( int x, int y, PixelInfo bgcolor, PixelInfo fillcolor ){
 	QColor c( fillcolor.info[0] & 0xFF, fillcolor.info[1] & 0xFF, fillcolor.info[2] & 0xFF );
-	PixelInfo pix = pixelInfo[ ( PaintWindow::height() - y ) * PaintWindow::width() + x ];
+	PixelInfo pix = pixelInfo[ ( height_ - y ) * width_ + x ];
 	int i = x;
 	int left, right;
 	
 	if( pix == bgcolor && pix != fillcolor ){
 		while( i >= 0 && pix == bgcolor && pix != fillcolor ){
-			pixelInfo[ ( PaintWindow::height() - y ) * PaintWindow::width() + i ] = fillcolor;
+			pixelInfo[ ( height_ - y ) * width_ + i ] = fillcolor;
 			i--;
-			pix = pixelInfo[ ( PaintWindow::height() - y ) * PaintWindow::width() + i ];
+			pix = pixelInfo[ ( height_ - y ) * width_ + i ];
 		}
 		left = i + 1;
 
 		i = x + 1;
-		pix = pixelInfo[ ( PaintWindow::height() - y ) * PaintWindow::width() + i ];
-		while( i <= PaintWindow::width() && pix == bgcolor && pix != fillcolor ){
-			pixelInfo[ ( PaintWindow::height() - y ) * PaintWindow::width() + i ] = fillcolor;
+		pix = pixelInfo[ ( height_ - y ) * width_ + i ];
+		while( i <= width_ && pix == bgcolor && pix != fillcolor ){
+			pixelInfo[ ( height_ - y ) * width_ + i ] = fillcolor;
 			i++;
-			pix = pixelInfo[ ( PaintWindow::height() - y ) * PaintWindow::width() + i ];
+			pix = pixelInfo[ ( height_ - y ) * width_ + i ];
 		}
 		right = i - 1;
 	
@@ -296,25 +375,57 @@ void PaintWidget::fillArea( int x, int y, PixelInfo bgcolor, PixelInfo fillcolor
 	}
 }
 
+void PaintWidget::saveToFile( const QString& filePath ){
+	fstream file;
+	bmpHeader* h1;
+	bmpInfoHeader* h2;
+	PixelInfo* bitmap;
+	
+	file.open( filePath.toStdString().c_str(), fstream::out | fstream::binary );
+	if( file.is_open() ){
+		bitmap = new PixelInfo[ rowSize_ * height_ ];
+		glPixelStorei( GL_PACK_ALIGNMENT, 4 );
+		glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
+		glReadPixels( 0, 0, width_, height_, GL_BGR, GL_UNSIGNED_BYTE, bitmap );
+		glPixelStorei( GL_PACK_ALIGNMENT, 1 );
+		glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
+		h2 = new bmpInfoHeader( width_, height_, rowSize_ );
+		h1 = new bmpHeader( h2 );
+		file.write( reinterpret_cast<char*>( h1 ), sizeof( bmpHeader ) );
+		file.write( reinterpret_cast<char*>( h2 ), sizeof( bmpInfoHeader ) );
+		file.write( reinterpret_cast<char*>( bitmap ), h2 -> imageSize );
+		file.close();
+		std::printf( "Works!\n" );
+		delete bitmap;
+		delete h2;
+		delete h1;
+	}
+}
+
 void PaintWidget::initializeGL(){
 	if( !firstDone ){
 		glClearColor( 1, 1, 1, 0.0 );
 		glMatrixMode( GL_PROJECTION );
 		gluOrtho2D( 0, PaintWindow::width(), 0, PaintWindow::height() );
 		glClear( GL_COLOR_BUFFER_BIT );
+		glPixelStorei( GL_PACK_ALIGNMENT, 1 );
+		glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
 	}
 	else{
-		glDrawPixels( PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+		glDrawPixels( width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 	}
 }
 
 void PaintWidget::resizeGL( int w, int h ){
-	fixPixelInfo( w, h, PaintWindow::width(), PaintWindow::height() );
+	fixPixelInfo( w, h );
 	glViewport( 0, 0, w, h );
 	glMatrixMode( GL_PROJECTION );
 	gluOrtho2D( 0, w, 0, h );
 	PaintWindow::setWidth( w );
 	PaintWindow::setHeight( h );
+	setWidth( w );
+	setHeight( h );
+	setRowSize( width_ * 3 );
 }
 
 void PaintWidget::paintGL(){
@@ -325,7 +436,7 @@ void PaintWidget::paintGL(){
 		if( !pencilActive && !eraserActive && !sprayActive ){
 			painter.begin( this );
 			painter.beginNativePainting();
-			glDrawPixels( PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+			glDrawPixels( width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 		}
 		switch( selectedTool_ ){
 			case PaintWindow::Line:
@@ -339,7 +450,7 @@ void PaintWidget::paintGL(){
 				break;
 			case PaintWindow::Spline:
 				if( nClicks < 2 ){
-					glDrawPixels( PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, tempInfo );
+					glDrawPixels( width_, height_, GL_RGB, GL_UNSIGNED_BYTE, tempInfo );
 				}
 				drawSpline( splinePoints );
 				break;
@@ -363,12 +474,12 @@ void PaintWidget::paintGL(){
 				drawPolygon( clickPoint.x(), clickPoint.y(), radius, polygonAngle, nSides_ );
 				break;
 			case PaintWindow::Bucket:
-				bg = pixelInfo[ ( PaintWindow::height() - clickPoint.y() ) * PaintWindow::width() + clickPoint.x() ];
+				bg = pixelInfo[ ( height_ - clickPoint.y() ) * width_ + clickPoint.x() ];
 				fill.info[0] = color.red();
 				fill.info[1] = color.green();
 				fill.info[2] = color.blue();
 				fillArea( clickPoint.x(), clickPoint.y(), bg, fill );
-				glDrawPixels( PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+				glDrawPixels( width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 				break;
 		}
 		if( !pencilActive && !eraserActive && !sprayActive ){
@@ -390,11 +501,11 @@ void PaintWidget::mousePressEvent( QMouseEvent* event ){
 		switch( selectedTool_ ){
 			case PaintWindow::Spline:
 				if( tempInfo == 0 ){
-					tempInfo = new PixelInfo[ PaintWindow::width() * PaintWindow::height() ];
+					tempInfo = new PixelInfo[ width_ * height_ ];
 				}
 				switch( nClicks ){
 					case 0:
-						glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+						glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 						for( int i = 0; i < 4; i++ ){
 							splinePoints[i].setX( event -> x() );
 							splinePoints[i].setY( event -> y() );
@@ -406,7 +517,7 @@ void PaintWidget::mousePressEvent( QMouseEvent* event ){
 							splinePoints[i].setY( event -> y() );
 						}
 						updateGL();
-						glDrawPixels( PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+						glDrawPixels( width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 						break;
 					case 2:
 						splinePoints[2].setX( event -> x() );
@@ -414,27 +525,27 @@ void PaintWidget::mousePressEvent( QMouseEvent* event ){
 						updateGL();
 						break;
 				}
-				glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, tempInfo );
+				glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, tempInfo );
 				break;
 			case PaintWindow::Pencil: case PaintWindow::Eraser:
-				glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+				glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 				curPoint.setX( event -> x() );
 				curPoint.setY( event -> y() );
 				updateGL();
 				break;
 			case PaintWindow::Spray:
-				glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+				glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 				curPoint.setX( event -> x() );
 				curPoint.setY( event -> y() );
 				setMouseTracking( true );
 				timer -> start( 50 );
 				break;
 			case PaintWindow::Bucket:
-				glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+				glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 				updateGL();
 				break;
 			default:
-				glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+				glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 				break;
 		}
 	}
@@ -449,7 +560,7 @@ void PaintWidget::mouseReleaseEvent( QMouseEvent* event ){
 				if( nClicks == 0 ){
 					delete tempInfo;
 					tempInfo = 0;
-					glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+					glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 				}
 				break;
 			case PaintWindow::Pencil:
@@ -550,7 +661,7 @@ QPoint* PaintWidget::getVertex( int xC, int yC, int r, float angle ){
 	return newPoint;
 }
 
-void PaintWidget::fixPixelInfo( int newWidth, int newHeight, int oldWidth, int oldHeight ){
+void PaintWidget::fixPixelInfo( int newWidth, int newHeight ){
 	PixelInfo* temp = new (std::nothrow) PixelInfo[ newWidth * newHeight ];
 	
 	if( temp != 0 ){

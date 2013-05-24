@@ -8,6 +8,8 @@
 #include <QButtonGroup>
 #include <QMenu>
 #include <QMenuBar>
+#include <QString>
+#include <QFileDialog>
 
 int PaintWindow::width_ = 500;
 int PaintWindow::height_ = 500;
@@ -35,6 +37,8 @@ PaintWindow::PaintWindow(){
 	connect( this, SIGNAL( changeTool( int ) ), paintWidget, SLOT( setSelectedTool( int ) ) );
 	connect( this, SIGNAL( changePolygonSides( int ) ), paintWidget, SLOT( setNSides( int ) ) );
 	connect( colorButtonGroup, SIGNAL( buttonClicked( int ) ), paintWidget, SLOT( setColor( int ) ) );
+	connect( saveFileAs, SIGNAL( triggered() ), this, SLOT( getFilePath() ) );
+	connect( this, SIGNAL( sendFilePath( const QString& ) ), paintWidget, SLOT( saveToFile( const QString& ) ) );
 	connect( closeWindow, SIGNAL( triggered() ), this, SLOT( close() ) );
 }
 
@@ -108,6 +112,16 @@ void PaintWindow::hexagonSelected(){
 
 void PaintWindow::heptagonSelected(){
 	emit changePolygonSides( 7 );
+}
+
+void PaintWindow::getFilePath(){
+	QString filePath;
+	
+	filePath = QFileDialog::getSaveFileName( this, tr( "Save file" ), ".", tr( "Bitmap (*.bmp)" ) );
+	
+	if( !filePath.isEmpty() ){
+		emit sendFilePath( filePath );
+	}
 }
 
 void PaintWindow::createMainToolBar(){

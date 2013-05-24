@@ -8,6 +8,7 @@
 #include <QButtonGroup>
 #include <QMenu>
 #include <QMenuBar>
+#include <QString>
 
 class PaintWidget;
 
@@ -48,6 +49,7 @@ class PaintWindow : public QMainWindow{
 		void hexagonSelected();
 		void heptagonSelected();
 		void bucketSelected();
+		void getFilePath();
 		
 	private:
 		PaintWidget* paintWidget;
@@ -105,6 +107,7 @@ class PaintWindow : public QMainWindow{
 	signals:
 		void changeTool( int );
 		void changePolygonSides( int );
+		void sendFilePath( const QString& );
 };
 
 #endif //PAINT_WINDOW_H
