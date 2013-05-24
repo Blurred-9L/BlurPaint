@@ -42,6 +42,7 @@ PaintWidget::PaintWidget( QWidget* parent ) : QGLWidget( parent ), clickPoint( 0
 	bgColor( 255, 255, 255 ){
 
 	setMinimumSize( PaintWindow::width(), PaintWindow::height() );
+	//setMaximumSize( 600, 600 );
 	srand( std::time( 0 ) );
 	firstDone = false;
 	pencilActive = false;
@@ -51,7 +52,7 @@ PaintWidget::PaintWidget( QWidget* parent ) : QGLWidget( parent ), clickPoint( 0
 	polygonAngle = 0.0;
 	selectedTool_ = PaintWindow::Line;
 	pixelInfo = new PixelInfo[ PaintWindow::width() * PaintWindow::height() ];
-	tempInfo = new PixelInfo[ PaintWindow::width() * PaintWindow::height() ];
+	tempInfo = 0;
 	splinePoints = new QPoint[4];
 	timer = new QTimer( this );
 	connect( timer, SIGNAL( timeout() ), this, SLOT( updateGL() ) );
@@ -267,24 +268,24 @@ void PaintWidget::drawPolygon( int xC, int yC, int r, float curAngle, int sides 
 
 void PaintWidget::fillArea( int x, int y, PixelInfo bgcolor, PixelInfo fillcolor ){
 	QColor c( fillcolor.info[0] & 0xFF, fillcolor.info[1] & 0xFF, fillcolor.info[2] & 0xFF );
-	PixelInfo pix = pixelInfo[ ( 500 - y ) * PaintWindow::width() + x ];
+	PixelInfo pix = pixelInfo[ ( PaintWindow::height() - y ) * PaintWindow::width() + x ];
 	int i = x;
 	int left, right;
 	
 	if( pix == bgcolor && pix != fillcolor ){
 		while( i >= 0 && pix == bgcolor && pix != fillcolor ){
-			pixelInfo[ ( 500 - y ) * PaintWindow::width() + i ] = fillcolor;
+			pixelInfo[ ( PaintWindow::height() - y ) * PaintWindow::width() + i ] = fillcolor;
 			i--;
-			pix = pixelInfo[ ( 500 - y ) * PaintWindow::width() + i ];
+			pix = pixelInfo[ ( PaintWindow::height() - y ) * PaintWindow::width() + i ];
 		}
 		left = i + 1;
 
 		i = x + 1;
-		pix = pixelInfo[ ( 500 - y ) * PaintWindow::width() + i ];
+		pix = pixelInfo[ ( PaintWindow::height() - y ) * PaintWindow::width() + i ];
 		while( i <= PaintWindow::width() && pix == bgcolor && pix != fillcolor ){
-			pixelInfo[ ( 500 - y ) * PaintWindow::width() + i ] = fillcolor;
+			pixelInfo[ ( PaintWindow::height() - y ) * PaintWindow::width() + i ] = fillcolor;
 			i++;
-			pix = pixelInfo[ ( 500 - y ) * PaintWindow::width() + i ];
+			pix = pixelInfo[ ( PaintWindow::height() - y ) * PaintWindow::width() + i ];
 		}
 		right = i - 1;
 	
@@ -296,24 +297,22 @@ void PaintWidget::fillArea( int x, int y, PixelInfo bgcolor, PixelInfo fillcolor
 }
 
 void PaintWidget::initializeGL(){
-	glClearColor( 1, 1, 1, 0.0 );
-	glMatrixMode( GL_PROJECTION );
-	gluOrtho2D( 0, PaintWindow::width(), 0, PaintWindow::height() );
-	glClear( GL_COLOR_BUFFER_BIT );
-	if( firstDone ){
+	if( !firstDone ){
+		glClearColor( 1, 1, 1, 0.0 );
+		glMatrixMode( GL_PROJECTION );
+		gluOrtho2D( 0, PaintWindow::width(), 0, PaintWindow::height() );
+		glClear( GL_COLOR_BUFFER_BIT );
+	}
+	else{
 		glDrawPixels( PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 	}
 }
 
 void PaintWidget::resizeGL( int w, int h ){
-	correctPixelPlacement( w, h, PaintWindow::width(), PaintWindow::height() );
-
+	fixPixelInfo( w, h, PaintWindow::width(), PaintWindow::height() );
 	glViewport( 0, 0, w, h );
 	glMatrixMode( GL_PROJECTION );
-	glLoadIdentity();
 	gluOrtho2D( 0, w, 0, h );
-	glLoadIdentity();
-	glClear( GL_COLOR_BUFFER_BIT );
 	PaintWindow::setWidth( w );
 	PaintWindow::setHeight( h );
 }
@@ -364,7 +363,7 @@ void PaintWidget::paintGL(){
 				drawPolygon( clickPoint.x(), clickPoint.y(), radius, polygonAngle, nSides_ );
 				break;
 			case PaintWindow::Bucket:
-				bg = pixelInfo[ ( 500 - clickPoint.y() ) * PaintWindow::width() + clickPoint.x() ];
+				bg = pixelInfo[ ( PaintWindow::height() - clickPoint.y() ) * PaintWindow::width() + clickPoint.x() ];
 				fill.info[0] = color.red();
 				fill.info[1] = color.green();
 				fill.info[2] = color.blue();
@@ -390,6 +389,9 @@ void PaintWidget::mousePressEvent( QMouseEvent* event ){
 		clickPoint.setY( event -> y() );
 		switch( selectedTool_ ){
 			case PaintWindow::Spline:
+				if( tempInfo == 0 ){
+					tempInfo = new PixelInfo[ PaintWindow::width() * PaintWindow::height() ];
+				}
 				switch( nClicks ){
 					case 0:
 						glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
@@ -444,6 +446,11 @@ void PaintWidget::mouseReleaseEvent( QMouseEvent* event ){
 		switch( selectedTool_ ){
 			case PaintWindow::Spline:
 				nClicks = ( nClicks + 1 ) % 3;
+				if( nClicks == 0 ){
+					delete tempInfo;
+					tempInfo = 0;
+					glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+				}
 				break;
 			case PaintWindow::Pencil:
 				pencilActive = false;
@@ -467,9 +474,6 @@ void PaintWidget::mouseReleaseEvent( QMouseEvent* event ){
 				break;
 			default:
 				break;
-		}
-		if( nClicks == 0 ){
-			glReadPixels( 0, 0, PaintWindow::width(), PaintWindow::height(), GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 		}
 	}
 }
@@ -546,53 +550,20 @@ QPoint* PaintWidget::getVertex( int xC, int yC, int r, float angle ){
 	return newPoint;
 }
 
-void PaintWidget::correctPixelPlacement( int newWidth, int newHeight, int oldWidth, int oldHeight ){
-	PixelInfo** oldMatrix;
-	PixelInfo** newMatrix;
+void PaintWidget::fixPixelInfo( int newWidth, int newHeight, int oldWidth, int oldHeight ){
+	PixelInfo* temp = new (std::nothrow) PixelInfo[ newWidth * newHeight ];
 	
-	oldMatrix = new PixelInfo*[oldHeight];
-	for( int i = 0; i < oldHeight; i++ ){
-		oldMatrix[i] = new PixelInfo[oldWidth];
-		for( int j = 0; j < oldWidth; j++ ){
-			oldMatrix[i][j] = pixelInfo[ i * oldWidth + j ];
-		}
-	}
-	
-	delete[] pixelInfo;
-	pixelInfo = new PixelInfo[ newWidth * newHeight ];
-	newMatrix = new PixelInfo*[newHeight];
-	for( int i = 0; i < newHeight; i++ ){
-		newMatrix[i] = new PixelInfo[newWidth];
-		if( i < oldHeight ){
+	if( temp != 0 ){
+		for( int i = 0; i < newHeight; i++ ){
 			for( int j = 0; j < newWidth; j++ ){
-				if( j < oldWidth ){
-					newMatrix[i][j] = oldMatrix[i][j];
-				}
-				else{
-					newMatrix[i][j].info[0] = newMatrix[i][j].info[1] = newMatrix[i][j].info[2] = 255;
-				}
+				temp[ i * newWidth + j ].info[0] = temp[ i * newWidth + j ].info[1] = temp[ i * newWidth + j ].info[2] = 255;
 			}
 		}
-		else{
-			for( int j = 0; j < newWidth; j++ ){
-				newMatrix[i][j].info[0] = newMatrix[i][j].info[1] = newMatrix[i][j].info[2] = 255;
-			}
-		}
-	}
 	
-	for( int i = 0; i < newHeight; i++ ){
-		for( int j = 0; j < newWidth; j++ ){
-			pixelInfo[ i * newWidth + j ] = newMatrix[i][j];
-		}
+		delete pixelInfo;
+		pixelInfo = temp;
 	}
-	
-	for( int i = 0; i < newHeight; i++ ){
-		delete[] newMatrix[i];
+	else{
+		std::printf( "ERROR\n" );
 	}
-	delete[] newMatrix;
-	
-	for( int i = 0; i < oldHeight; i++ ){
-		delete[] oldMatrix[i];
-	}
-	delete[] oldMatrix;
 }

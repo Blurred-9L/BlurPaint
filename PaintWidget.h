@@ -77,7 +77,7 @@ class PaintWidget : public QGLWidget{
 		void putCirclePixels( int x, int y, int xC, int yC );
 		void putEllipsePixels( int x, int y, int xC, int yC );
 		QPoint* getVertex( int xC, int yC, int r, float angle );
-		void correctPixelPlacement( int newWidth, int newHeight, int oldWidth, int oldHeight );
+		void fixPixelInfo( int newWidth, int newHeight, int oldWidth, int oldHeight );
 };
 
 #endif //PAINT_WIDGET_H
