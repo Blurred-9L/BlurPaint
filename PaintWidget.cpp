@@ -85,12 +85,14 @@ typedef struct PixelInfo{
 	
 }PixelInfo;
 
-PaintWidget::PaintWidget( QWidget* parent ) : QGLWidget( parent ), clickPoint( 0, 0 ), curPoint( 0, 0 ), color( 0, 0, 0 ),
-	bgColor( 255, 255, 255 ){
+PaintWidget::PaintWidget( QWidget* parent ) : QGLWidget( parent ), clickPoint( 0, 0 ), curPoint( 0, 0 ), lowPoint( 0, 0 ),
+	color( 0, 0, 0 ), bgColor( 255, 255, 255 ){
 
 	width_ = PaintWindow::width();
 	height_ = PaintWindow::height();
 	rowSize_ = width_ * 3;
+	rWidth = 0;
+	rHeight = 0;
 	while( rowSize_ % 4 != 0 ){
 		rowSize_++;
 	}
@@ -100,11 +102,13 @@ PaintWidget::PaintWidget( QWidget* parent ) : QGLWidget( parent ), clickPoint( 0
 	pencilActive = false;
 	eraserActive = false;
 	sprayActive = false;
+	correctClick = false;
 	nClicks = 0;
 	polygonAngle = 0.0;
 	selectedTool_ = PaintWindow::Line;
 	pixelInfo = new PixelInfo[ width_ * height_ ];
 	tempInfo = 0;
+	bufferInfo = 0;
 	splinePoints = new QPoint[4];
 	timer = new QTimer( this );
 	connect( timer, SIGNAL( timeout() ), this, SLOT( updateGL() ) );
@@ -240,6 +244,64 @@ void PaintWidget::drawLine( int x1, int y1, int x2, int y2 ){
 	}
 }
 
+void PaintWidget::dotLine( int x1, int y1, int x2, int y2 ){
+	int dx = abs( x2 - x1 );
+	int dy = abs( y2 - y1 );
+	int p;
+	int x, y;
+	int addX = ( x1 < x2 )? 1 : ( x1 > x2 )? -1 : 0;
+	int addY = ( y1 < y2 )? 1 : ( y1 > y2 )? -1 : 0;
+	bool write = true;
+	int count = 0;
+	
+	x = x1;
+	y = y1;
+	if( dx >= dy ){
+		p = 2 * dy - dx;
+		putPixel( x, y, QColor( 0, 0, 0 ) );
+		count++;
+		while( x != x2 ){
+			x += addX;
+			if( p < 0 ){
+				p += 2 * dy;
+			}
+			else{
+				y += addY;
+				p += 2 * ( dy - dx );
+			}
+			if( write ){
+				putPixel( x, y, QColor( 0, 0, 0 ) );
+			}
+			count++;
+			if( count % 5 == 0 ){
+				write = !write;
+			}
+		}
+	}
+	else{
+		p = 2 * dx - dy;
+		putPixel( x, y, QColor( 0, 0, 0 ) );
+		count++;
+		while( y != y2 ){
+			y += addY;
+			if( p < 0 ){
+				p += 2 * dx;
+			}
+			else{
+				x += addX;
+				p += 2 * ( dx - dy );
+			}
+			if( write ){
+				putPixel( x, y, QColor( 0, 0, 0 ) );
+			}
+			count++;
+			if( count % 5 == 0 ){
+				write = !write;
+			}
+		}
+	}
+}
+
 void PaintWidget::drawCircle( int xC, int yC, int r ){
 	int x, y;
 	int p = 1 - r;
@@ -345,6 +407,40 @@ void PaintWidget::drawPolygon( int xC, int yC, int r, float curAngle, int sides 
 	delete[] vertexes;
 }
 
+void PaintWidget::drawRectangle( int x1, int y1, int x2, int y2, bool dotted ){
+	if( dotted ){
+		if( x2 > x1 && y2 > y1 ){
+			lowPoint.setX( x1 );
+			lowPoint.setY( y2 );
+		}
+		else if( x2 < x1 && y2 > y1 ){
+			lowPoint.setX( x2 );
+			lowPoint.setY( y2 );
+		}
+		else if( x2 < x1 && y2 < y1 ){
+			lowPoint.setX( x2 );
+			lowPoint.setY( y1 );
+		}
+		else{
+			lowPoint.setX( x1 );
+			lowPoint.setY( y1 );
+		}
+		rWidth = abs( x2 - x1 ) - 1;
+		rHeight = abs( y2 - y1 ) - 1;
+		
+		dotLine( x1, y1, x1, y2 );
+		dotLine( x1, y1, x2, y1 );
+		dotLine( x1, y2, x2, y2 );
+		dotLine( x2, y1, x2, y2 );
+	}
+	else{
+		drawLine( x1, y1, x1, y2 );
+		drawLine( x1, y1, x2, y1 );
+		drawLine( x1, y2, x2, y2 );
+		drawLine( x2, y1, x2, y2 );
+	}
+}
+
 void PaintWidget::fillArea( int x, int y, PixelInfo bgcolor, PixelInfo fillcolor ){
 	QColor c( fillcolor.info[0] & 0xFF, fillcolor.info[1] & 0xFF, fillcolor.info[2] & 0xFF );
 	PixelInfo pix = pixelInfo[ ( height_ - y ) * width_ + x ];
@@ -429,7 +525,6 @@ void PaintWidget::resizeGL( int w, int h ){
 }
 
 void PaintWidget::paintGL(){
-	QPen pen;
 	PixelInfo bg, fill;
 	
 	if( firstDone ){
@@ -473,6 +568,9 @@ void PaintWidget::paintGL(){
 			case PaintWindow::Polygon:
 				drawPolygon( clickPoint.x(), clickPoint.y(), radius, polygonAngle, nSides_ );
 				break;
+			case PaintWindow::Rectangle:
+				drawRectangle( clickPoint.x(), clickPoint.y(), curPoint.x(), curPoint.y() );
+				break;
 			case PaintWindow::Bucket:
 				bg = pixelInfo[ ( height_ - clickPoint.y() ) * width_ + clickPoint.x() ];
 				fill.info[0] = color.red();
@@ -480,6 +578,30 @@ void PaintWidget::paintGL(){
 				fill.info[2] = color.blue();
 				fillArea( clickPoint.x(), clickPoint.y(), bg, fill );
 				glDrawPixels( width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+				break;
+			case PaintWindow::Copy:
+				if( nClicks < 1 ){
+					glDrawPixels( width_, height_, GL_RGB, GL_UNSIGNED_BYTE, tempInfo );
+					drawRectangle( clickPoint.x(), clickPoint.y(), curPoint.x(), curPoint.y(), true );
+				}
+				else if( correctClick ){
+					glWindowPos2fMESAemulate( lowPoint.x() + ( curPoint.x() - clickPoint.x() ),
+											  height_ - ( lowPoint.y() + ( curPoint.y() - clickPoint.y() ) ) );
+					glDrawPixels( rWidth, rHeight, GL_RGB, GL_UNSIGNED_BYTE, bufferInfo );
+					glWindowPos2fMESAemulate( 0, 0 );
+				}
+				break;
+			case PaintWindow::Cut:
+				if( nClicks < 1 ){
+					glDrawPixels( width_, height_, GL_RGB, GL_UNSIGNED_BYTE, tempInfo );
+					drawRectangle( clickPoint.x(), clickPoint.y(), curPoint.x(), curPoint.y(), true );
+				}
+				else if( correctClick ){
+					glWindowPos2fMESAemulate( lowPoint.x() + ( curPoint.x() - clickPoint.x() ),
+											  height_ - ( lowPoint.y() + ( curPoint.y() - clickPoint.y() ) ) );
+					glDrawPixels( rWidth, rHeight, GL_RGB, GL_UNSIGNED_BYTE, bufferInfo );
+					glWindowPos2fMESAemulate( 0, 0 );
+				}
 				break;
 		}
 		if( !pencilActive && !eraserActive && !sprayActive ){
@@ -491,8 +613,6 @@ void PaintWidget::paintGL(){
 }
 
 void PaintWidget::mousePressEvent( QMouseEvent* event ){
-	QPen pen;
-	
 	if( event -> button() == Qt::LeftButton ){
 		clicked = true;
 		firstDone = true;
@@ -544,6 +664,58 @@ void PaintWidget::mousePressEvent( QMouseEvent* event ){
 				glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 				updateGL();
 				break;
+			case PaintWindow::Copy:
+				if( tempInfo == 0 ){
+					tempInfo = new PixelInfo[ width_ * height_ ];
+				}
+				switch( nClicks ){
+					case 0:
+						glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+						glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, tempInfo );
+						break;
+					case 1:
+						if( checkPoint( clickPoint.x(), clickPoint.y(), lowPoint.x(), lowPoint.y(),
+							lowPoint.x() + rWidth, lowPoint.y() - rHeight ) ){
+							if( bufferInfo == 0 ){
+								bufferInfo = new PixelInfo[ rWidth * rHeight ];
+							}
+							glReadPixels( lowPoint.x() + 1, height_ - lowPoint.y() + 1, rWidth, rHeight,
+										  GL_RGB, GL_UNSIGNED_BYTE, bufferInfo );
+							correctClick = true;
+						}
+						else{
+							updateGL();
+						}
+						break;
+				}
+				break;
+			case PaintWindow::Cut:
+				if( tempInfo == 0 ){
+					tempInfo = new PixelInfo[ width_ * height_ ];
+				}
+				switch( nClicks ){
+					case 0:
+						glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+						glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, tempInfo );
+						break;
+					case 1:
+						if( checkPoint( clickPoint.x(), clickPoint.y(), lowPoint.x(), lowPoint.y(),
+							lowPoint.x() + rWidth, lowPoint.y() - rHeight ) ){
+							if( bufferInfo == 0 ){
+								bufferInfo = new PixelInfo[ rWidth * rHeight ];
+							}
+							glReadPixels( lowPoint.x() + 1, height_ - lowPoint.y() + 1, rWidth, rHeight,
+										  GL_RGB, GL_UNSIGNED_BYTE, bufferInfo );
+							correctClick = true;
+							glDrawPixels( width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+							clearArea( lowPoint.x() + 1, height_ - lowPoint.y() + 1, rWidth, rHeight );
+						}
+						else{
+							updateGL();
+						}
+						break;
+				}
+				break;
 			default:
 				glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 				break;
@@ -582,6 +754,28 @@ void PaintWidget::mouseReleaseEvent( QMouseEvent* event ){
 				glFlush();
 				painter.endNativePainting();
 				painter.end();
+				break;
+			case PaintWindow::Copy:
+				nClicks = ( nClicks + 1 ) % 2;
+				if( nClicks == 0 ){
+					delete tempInfo;
+					tempInfo = 0;
+					delete bufferInfo;
+					bufferInfo = 0;
+					glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+					correctClick = false;
+				}
+				break;
+			case PaintWindow::Cut:
+				nClicks = ( nClicks + 1 ) % 2;
+				if( nClicks == 0 ){
+					delete tempInfo;
+					tempInfo = 0;
+					delete bufferInfo;
+					bufferInfo = 0;
+					glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+					correctClick = false;
+				}
 				break;
 			default:
 				break;
@@ -677,4 +871,55 @@ void PaintWidget::fixPixelInfo( int newWidth, int newHeight ){
 	else{
 		std::printf( "ERROR\n" );
 	}
+}
+
+bool PaintWidget::checkPoint( int x, int y, int lx1, int ly1, int lx2, int ly2 ){
+	return ( x > lx1 && x < lx2 && y > ly2 && y < ly1 );
+}
+
+void PaintWidget::clearArea( int x, int y, int w, int h ){
+	PixelInfo* clearBuffer = new PixelInfo[ w * h ];
+	
+	std::printf( "Ok\n" );
+	for( int i = 0; i < w * h; i++ ){
+		clearBuffer[i].info[0] = clearBuffer[i].info[1] = clearBuffer[i].info[2] = 255;
+	}
+	
+	glWindowPos2fMESAemulate( x, y );
+	glDrawPixels( rWidth, rHeight, GL_RGB, GL_UNSIGNED_BYTE, clearBuffer );
+	glWindowPos2fMESAemulate( 0, 0 );
+	glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+	
+	delete[] clearBuffer;
+}
+
+void PaintWidget::glWindowPos4fMESAemulate( GLfloat x, GLfloat y, GLfloat z, GLfloat w ){
+	GLfloat fx, fy;
+	
+	/* Push current matrix mode and viewport attributes. */
+	glPushAttrib( GL_TRANSFORM_BIT | GL_VIEWPORT_BIT );
+	/* Setup projection parameters. */
+	glMatrixMode( GL_PROJECTION );
+	glPushMatrix();
+	glLoadIdentity();
+	glMatrixMode( GL_MODELVIEW );
+	glPushMatrix();
+	glLoadIdentity();
+	glDepthRange( z, z );
+	glViewport( (int)x - 1, (int)y - 1, 2, 2);
+
+	/* Set the raster (window) position. */
+	fx = x - (int) x;
+	fy = y - (int) y;
+	glRasterPos4f(fx, fy, 0.0, w);
+
+	/* Restore matrices, viewport and matrix mode. */
+	glPopMatrix();
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glPopAttrib();
+}
+
+void PaintWidget::glWindowPos2fMESAemulate( GLfloat x, GLfloat y ){
+	glWindowPos4fMESAemulate(x, y, 0, 1);
 }

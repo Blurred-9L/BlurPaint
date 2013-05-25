@@ -90,8 +90,20 @@ void PaintWindow::polygonSelected(){
 	emit changeTool( PaintWindow::Polygon );
 }
 
+void PaintWindow::rectangleSelected(){
+	emit changeTool( PaintWindow::Rectangle );
+}
+
 void PaintWindow::bucketSelected(){
 	emit changeTool( PaintWindow::Bucket );
+}
+
+void PaintWindow::copySelected(){
+	emit changeTool( PaintWindow::Copy );
+}
+
+void PaintWindow::cutSelected(){
+	emit changeTool( PaintWindow::Cut );
 }
 
 void PaintWindow::triangleSelected(){
@@ -190,6 +202,22 @@ void PaintWindow::createMainToolBar(){
 	connect( bucketToolAction, SIGNAL( triggered() ), this, SLOT( bucketSelected() ) );
 	mainToolBar -> addWidget( bucketToolButton );
 	bucketToolButton -> setAutoRaise( false );
+	
+	copyToolButton = new QToolButton( mainToolBar );
+	copyToolAction = new QAction( QIcon( "./Icons/CopyIcon.png" ), tr( "Copy" ), this );
+	copyToolAction -> setStatusTip( tr( "Copy tool" ) );
+	copyToolButton -> setDefaultAction( copyToolAction );
+	connect( copyToolAction, SIGNAL( triggered() ), this, SLOT( copySelected() ) );
+	mainToolBar -> addWidget( copyToolButton );
+	copyToolButton -> setAutoRaise( false );
+	
+	cutToolButton = new QToolButton( mainToolBar );
+	cutToolAction = new QAction( QIcon( "./Icons/CutIcon.png" ), tr( "Cut" ), this );
+	cutToolAction -> setStatusTip( tr( "Cut selection tool" ) );
+	cutToolButton -> setDefaultAction( cutToolAction );
+	connect( cutToolAction, SIGNAL( triggered() ), this, SLOT( cutSelected() ) );
+	mainToolBar -> addWidget( cutToolButton );
+	cutToolButton -> setAutoRaise( false );
 }
 
 void PaintWindow::createPolygonToolBar(){
@@ -239,6 +267,14 @@ void PaintWindow::createPolygonToolBar(){
 	connect( heptagonToolAction, SIGNAL( triggered() ), this, SLOT( heptagonSelected() ) );
 	polygonToolBar -> addWidget( heptagonToolButton );
 	heptagonToolButton -> setAutoRaise( false );
+	
+	rectangleToolButton = new QToolButton( polygonToolBar );
+	rectangleToolAction = new QAction( QIcon( "./Icons/RectangleIcon.png" ), tr( "Rectangle" ), this );
+	rectangleToolAction -> setStatusTip( tr( "Rectangle Tool" ) );
+	rectangleToolButton -> setDefaultAction( rectangleToolAction );
+	connect( rectangleToolAction, SIGNAL( triggered() ), this, SLOT( rectangleSelected() ) );
+	polygonToolBar -> addWidget( rectangleToolButton );
+	rectangleToolButton -> setAutoRaise( false );
 }
 
 void PaintWindow::createColorToolBar(){

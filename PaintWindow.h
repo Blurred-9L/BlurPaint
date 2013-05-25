@@ -25,7 +25,10 @@ class PaintWindow : public QMainWindow{
 			Eraser,
 			Spray,
 			Polygon,
-			Bucket
+			Rectangle,
+			Bucket,
+			Copy,
+			Cut
 		};
 	
 		PaintWindow();
@@ -48,7 +51,10 @@ class PaintWindow : public QMainWindow{
 		void pentagonSelected();
 		void hexagonSelected();
 		void heptagonSelected();
+		void rectangleSelected();
 		void bucketSelected();
+		void copySelected();
+		void cutSelected();
 		void getFilePath();
 		
 	private:
@@ -69,7 +75,10 @@ class PaintWindow : public QMainWindow{
 		QToolButton* pentagonToolButton;
 		QToolButton* hexagonToolButton;
 		QToolButton* heptagonToolButton;
+		QToolButton* rectangleToolButton;
 		QToolButton* bucketToolButton;
+		QToolButton* copyToolButton;
+		QToolButton* cutToolButton;
 		QToolButton* blackButton;
 		QToolButton* whiteButton;
 		QToolButton* redButton;
@@ -90,7 +99,10 @@ class PaintWindow : public QMainWindow{
 		QAction* pentagonToolAction;
 		QAction* hexagonToolAction;
 		QAction* heptagonToolAction;
+		QAction* rectangleToolAction;
 		QAction* bucketToolAction;
+		QAction* copyToolAction;
+		QAction* cutToolAction;
 		QAction* openFile;
 		QAction* saveFile;
 		QAction* saveFileAs;

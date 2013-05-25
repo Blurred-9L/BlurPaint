@@ -37,11 +37,13 @@ class PaintWidget : public QGLWidget{
 		void putPixel( int x, int y, const QColor& c );
 		void putSquare( int x, int y, const QColor& c );
 		void drawLine( int x1, int y1, int x2, int y2 );
+		void dotLine( int x1, int y1, int x2, int y2 );
 		void drawCircle( int xC, int yC, int r );
 		void drawEllipse( int xC, int yC, int rX, int rY );
 		void drawSpline( QPoint* points );
 		void sprayPixels( int x, int y );
 		void drawPolygon( int xC, int yC, int r, float curAngle, int sides );
+		void drawRectangle( int x1, int y1, int x2, int y2, bool dotted = false );
 		void fillArea( int x, int y, PixelInfo bgcolor, PixelInfo fillcolor );
 		
 	public slots:
@@ -65,6 +67,8 @@ class PaintWidget : public QGLWidget{
 		int width_;
 		int height_;
 		int rowSize_;
+		int rWidth;
+		int rHeight;
 		int radius;
 		int rx;
 		int ry;
@@ -75,10 +79,13 @@ class PaintWidget : public QGLWidget{
 		bool eraserActive;
 		bool sprayActive;
 		bool clicked;
+		bool correctClick;
 		PixelInfo* pixelInfo;
 		PixelInfo* tempInfo;
+		PixelInfo* bufferInfo;
 		QPoint clickPoint;
 		QPoint curPoint;
+		QPoint lowPoint;
 		QPoint* splinePoints;
 		QColor color;
 		QColor bgColor;
@@ -89,6 +96,11 @@ class PaintWidget : public QGLWidget{
 		void putEllipsePixels( int x, int y, int xC, int yC );
 		QPoint* getVertex( int xC, int yC, int r, float angle );
 		void fixPixelInfo( int newWidth, int newHeight );
+		bool checkPoint( int x, int y, int x1, int y1, int x2, int y2 );
+		void clearArea( int x, int y, int w, int h );
+		
+		void glWindowPos4fMESAemulate( GLfloat x, GLfloat y, GLfloat z, GLfloat w );
+		void glWindowPos2fMESAemulate( GLfloat x, GLfloat y );
 };
 
 #endif //PAINT_WIDGET_H
