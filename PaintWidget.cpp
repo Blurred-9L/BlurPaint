@@ -20,6 +20,8 @@ using std::cos;
 #include <cstdlib>
 using std::srand;
 using std::rand;
+#include <cstring>
+using std::memset;
 #include <ctime>
 #include <fstream>
 using std::fstream;
@@ -29,17 +31,17 @@ using std::fstream;
 #define PIX_COMPONENTS 3
 
 typedef struct bmpInfoHeader{
-	long infoHeaderSize; 	//40
-	long width; 			//500
-	long height; 			//500
-	short nPlanes; 			//1
-	short colorDepth; 		//24
-	long compressionMethod; //0
-	long imageSize; 		//500 * 500 * 3
-	long hResolution;		//0
-	long vResolution;		//0
-	long nColors;			//0
-	long nImportantColors;	//0	
+	unsigned long infoHeaderSize; 		//40
+	long width; 						//500
+	long height; 						//500
+	unsigned short nPlanes; 			//1
+	unsigned short colorDepth; 			//24
+	unsigned long compressionMethod; 	//0
+	unsigned long imageSize; 			//500 * 500 * 3
+	long hResolution;					//0
+	long vResolution;					//0
+	unsigned long nColors;				//0
+	unsigned long nImportantColors;		//0	
 	
 	bmpInfoHeader( long w, long h, long r ){
 		infoHeaderSize = 40;
@@ -49,8 +51,8 @@ typedef struct bmpInfoHeader{
 		colorDepth = 24;
 		compressionMethod = 0;
 		imageSize = height * r;
-		hResolution = 0;
-		vResolution = 0;
+		hResolution = 2835;
+		vResolution = 2835;
 		nColors = 0;
 		nImportantColors = 0;
 	}
@@ -65,9 +67,9 @@ typedef struct bmpHeader{
 	
 	bmpHeader( bmpInfoHeader* h ){
 		signature = 0x424D;
-		fileSize = sizeof( bmpHeader ) + sizeof( bmpInfoHeader ) + h -> imageSize;
+		fileSize = 54 + h -> imageSize;
 		reservedField = 0;
-		offset = sizeof( bmpHeader ) + sizeof( bmpInfoHeader );
+		offset = 54;
 	}
 	
 }bmpHeader;
@@ -476,6 +478,7 @@ void PaintWidget::saveToFile( const QString& filePath ){
 	bmpHeader* h1;
 	bmpInfoHeader* h2;
 	PixelInfo* bitmap;
+	unsigned char aux;
 	
 	file.open( filePath.toStdString().c_str(), fstream::out | fstream::binary );
 	if( file.is_open() ){
@@ -487,11 +490,13 @@ void PaintWidget::saveToFile( const QString& filePath ){
 		glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
 		h2 = new bmpInfoHeader( width_, height_, rowSize_ );
 		h1 = new bmpHeader( h2 );
-		file.write( reinterpret_cast<char*>( h1 ), sizeof( bmpHeader ) );
+		file.write( reinterpret_cast<char*>( &( h1 -> signature ) ), sizeof( short ) );
+		file.write( reinterpret_cast<char*>( &( h1 -> fileSize ) ), sizeof( long ) );
+		file.write( reinterpret_cast<char*>( &( h1 -> reservedField ) ), sizeof( long ) );
+		file.write( reinterpret_cast<char*>( &( h1 -> offset ) ), sizeof( long ) );
 		file.write( reinterpret_cast<char*>( h2 ), sizeof( bmpInfoHeader ) );
 		file.write( reinterpret_cast<char*>( bitmap ), h2 -> imageSize );
 		file.close();
-		std::printf( "Works!\n" );
 		delete bitmap;
 		delete h2;
 		delete h1;
@@ -880,7 +885,6 @@ bool PaintWidget::checkPoint( int x, int y, int lx1, int ly1, int lx2, int ly2 )
 void PaintWidget::clearArea( int x, int y, int w, int h ){
 	PixelInfo* clearBuffer = new PixelInfo[ w * h ];
 	
-	std::printf( "Ok\n" );
 	for( int i = 0; i < w * h; i++ ){
 		clearBuffer[i].info[0] = clearBuffer[i].info[1] = clearBuffer[i].info[2] = 255;
 	}
