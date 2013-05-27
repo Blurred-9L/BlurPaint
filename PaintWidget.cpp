@@ -65,7 +65,7 @@ typedef struct PixelInfo{
 
 PaintWidget::PaintWidget( QWidget* parent ) : QGLWidget( parent ), clickPoint( 0, 0 ), curPoint( 0, 0 ), lowPoint( 0, 0 ),
 	color( 0, 0, 0 ), bgColor( 255, 255, 255 ){
-
+	
 	width_ = PaintWindow::width();
 	height_ = PaintWindow::height();
 	rowSize_ = width_ * 3;
@@ -81,6 +81,7 @@ PaintWidget::PaintWidget( QWidget* parent ) : QGLWidget( parent ), clickPoint( 0
 	eraserActive = false;
 	sprayActive = false;
 	correctClick = false;
+	recentlyCleared = false;
 	nClicks = 0;
 	polygonAngle = 0.0;
 	selectedTool_ = PaintWindow::Line;
@@ -450,6 +451,14 @@ void PaintWidget::fillArea( int x, int y, PixelInfo bgcolor, PixelInfo fillcolor
 	}
 }
 
+void PaintWidget::clear(){
+	glClearColor( 1, 1, 1, 0.0 );
+	glClear( GL_COLOR_BUFFER_BIT );
+	glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+	recentlyCleared = true;
+	updateGL();
+}
+
 void PaintWidget::saveToFile( const QString& filePath ){
 	FILE* file;
 	bmpHeader h1;
@@ -475,7 +484,7 @@ void PaintWidget::saveToFile( const QString& filePath ){
 		while( h2.imageSize % 4 != 0 ){
 			h2.imageSize++;
 		}
-		h2.imageSize = height_;
+		h2.imageSize *= height_;
 		h2.hResolution = 0;
 		h2.vResolution = 0;
 		h2.nColors = 0;
@@ -498,11 +507,49 @@ void PaintWidget::saveToFile( const QString& filePath ){
 	}
 }
 
+void PaintWidget::loadFromFile( const QString& filePath ){
+	FILE* file;
+	bmpHeader h1;
+	bmpInfoHeader h2;
+	PixelInfo* bitmap;
+	int r;
+	
+	file = fopen( filePath.toStdString().c_str(), "rb" );
+	if( file != NULL ){
+		r = fread( &h1.signature, sizeof( short ), 1, file );
+		r = fread( &h1.fileSize, sizeof( long ), 1, file );
+		r = fread( &h1.reservedField, sizeof( long ), 1, file );
+		r = fread( &h1.offset, sizeof( long ), 1, file );
+		r = fread( &h2, sizeof( bmpInfoHeader ), 1, file );
+		
+		if( h1.signature == 0x4D42 && h2.compressionMethod == 0 && h2.colorDepth == 24 ){
+			bitmap = new PixelInfo[h2.imageSize];
+			r = fread( bitmap, h2.imageSize, 1, file );
+		
+			resize( h2.width, h2.height );
+			glPixelStorei( GL_PACK_ALIGNMENT, 4 );
+			glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
+			glDrawPixels( h2.width, h2.height, GL_BGR, GL_UNSIGNED_BYTE, bitmap );
+			glPixelStorei( GL_PACK_ALIGNMENT, 1 );
+			glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
+		
+			fclose( file );
+			delete bitmap;
+			glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+			recentlyCleared = true;
+			updateGL();
+		}
+		else{
+			fclose( file );
+		}
+	}
+}
+
 void PaintWidget::initializeGL(){
 	if( !firstDone ){
 		glClearColor( 1, 1, 1, 0.0 );
 		glMatrixMode( GL_PROJECTION );
-		gluOrtho2D( 0, PaintWindow::width(), 0, PaintWindow::height() );
+		gluOrtho2D( 0, width_, 0, height_ );
 		glClear( GL_COLOR_BUFFER_BIT );
 		glPixelStorei( GL_PACK_ALIGNMENT, 1 );
 		glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
@@ -533,76 +580,81 @@ void PaintWidget::paintGL(){
 			painter.beginNativePainting();
 			glDrawPixels( width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 		}
-		switch( selectedTool_ ){
-			case PaintWindow::Line:
-				drawLine( clickPoint.x(), clickPoint.y(), curPoint.x(), curPoint.y() );
-				break;
-			case PaintWindow::Circle:
-				drawCircle( clickPoint.x(), clickPoint.y(), radius );
-				break;
-			case PaintWindow::Ellipse:
-				drawEllipse( clickPoint.x(), clickPoint.y(), rx, ry );
-				break;
-			case PaintWindow::Spline:
-				if( nClicks < 2 ){
-					glDrawPixels( width_, height_, GL_RGB, GL_UNSIGNED_BYTE, tempInfo );
-				}
-				drawSpline( splinePoints );
-				break;
-			case PaintWindow::Pencil:
-				drawLine( clickPoint.x(), clickPoint.y(), curPoint.x(), curPoint.y() );
-				clickPoint.setX( curPoint.x() );
-				clickPoint.setY( curPoint.y() );
-				pencilActive = true;
-				break;
-			case PaintWindow::Eraser:
-				drawLine( clickPoint.x(), clickPoint.y(), curPoint.x(), curPoint.y() );
-				clickPoint.setX( curPoint.x() );
-				clickPoint.setY( curPoint.y() );
-				eraserActive = true;
-				break;
-			case PaintWindow::Spray:
-				sprayPixels( curPoint.x(), curPoint.y() );
-				sprayActive = true;
-				break;
-			case PaintWindow::Polygon:
-				drawPolygon( clickPoint.x(), clickPoint.y(), radius, polygonAngle, nSides_ );
-				break;
-			case PaintWindow::Rectangle:
-				drawRectangle( clickPoint.x(), clickPoint.y(), curPoint.x(), curPoint.y() );
-				break;
-			case PaintWindow::Bucket:
-				bg = pixelInfo[ ( height_ - clickPoint.y() ) * width_ + clickPoint.x() ];
-				fill.info[0] = color.red();
-				fill.info[1] = color.green();
-				fill.info[2] = color.blue();
-				fillArea( clickPoint.x(), clickPoint.y(), bg, fill );
-				glDrawPixels( width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
-				break;
-			case PaintWindow::Copy:
-				if( nClicks < 1 ){
-					glDrawPixels( width_, height_, GL_RGB, GL_UNSIGNED_BYTE, tempInfo );
-					drawRectangle( clickPoint.x(), clickPoint.y(), curPoint.x(), curPoint.y(), true );
-				}
-				else if( correctClick ){
-					glWindowPos2fMESAemulate( lowPoint.x() + ( curPoint.x() - clickPoint.x() ),
-											  height_ - ( lowPoint.y() + ( curPoint.y() - clickPoint.y() ) ) );
-					glDrawPixels( rWidth, rHeight, GL_RGB, GL_UNSIGNED_BYTE, bufferInfo );
-					glWindowPos2fMESAemulate( 0, 0 );
-				}
-				break;
-			case PaintWindow::Cut:
-				if( nClicks < 1 ){
-					glDrawPixels( width_, height_, GL_RGB, GL_UNSIGNED_BYTE, tempInfo );
-					drawRectangle( clickPoint.x(), clickPoint.y(), curPoint.x(), curPoint.y(), true );
-				}
-				else if( correctClick ){
-					glWindowPos2fMESAemulate( lowPoint.x() + ( curPoint.x() - clickPoint.x() ),
-											  height_ - ( lowPoint.y() + ( curPoint.y() - clickPoint.y() ) ) );
-					glDrawPixels( rWidth, rHeight, GL_RGB, GL_UNSIGNED_BYTE, bufferInfo );
-					glWindowPos2fMESAemulate( 0, 0 );
-				}
-				break;
+		if( !recentlyCleared ){
+			switch( selectedTool_ ){
+				case PaintWindow::Line:
+					drawLine( clickPoint.x(), clickPoint.y(), curPoint.x(), curPoint.y() );
+					break;
+				case PaintWindow::Circle:
+					drawCircle( clickPoint.x(), clickPoint.y(), radius );
+					break;
+				case PaintWindow::Ellipse:
+					drawEllipse( clickPoint.x(), clickPoint.y(), rx, ry );
+					break;
+				case PaintWindow::Spline:
+					if( nClicks < 2 ){
+						glDrawPixels( width_, height_, GL_RGB, GL_UNSIGNED_BYTE, tempInfo );
+					}
+					drawSpline( splinePoints );
+					break;
+				case PaintWindow::Pencil:
+					drawLine( clickPoint.x(), clickPoint.y(), curPoint.x(), curPoint.y() );
+					clickPoint.setX( curPoint.x() );
+					clickPoint.setY( curPoint.y() );
+					pencilActive = true;
+					break;
+				case PaintWindow::Eraser:
+					drawLine( clickPoint.x(), clickPoint.y(), curPoint.x(), curPoint.y() );
+					clickPoint.setX( curPoint.x() );
+					clickPoint.setY( curPoint.y() );
+					eraserActive = true;
+					break;
+				case PaintWindow::Spray:
+					sprayPixels( curPoint.x(), curPoint.y() );
+					sprayActive = true;
+					break;
+				case PaintWindow::Polygon:
+					drawPolygon( clickPoint.x(), clickPoint.y(), radius, polygonAngle, nSides_ );
+					break;
+				case PaintWindow::Rectangle:
+					drawRectangle( clickPoint.x(), clickPoint.y(), curPoint.x(), curPoint.y() );
+					break;
+				case PaintWindow::Bucket:
+					bg = pixelInfo[ ( height_ - clickPoint.y() ) * width_ + clickPoint.x() ];
+					fill.info[0] = color.red();
+					fill.info[1] = color.green();
+					fill.info[2] = color.blue();
+					fillArea( clickPoint.x(), clickPoint.y(), bg, fill );
+					glDrawPixels( width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+					break;
+				case PaintWindow::Copy:
+					if( nClicks < 1 ){
+						glDrawPixels( width_, height_, GL_RGB, GL_UNSIGNED_BYTE, tempInfo );
+						drawRectangle( clickPoint.x(), clickPoint.y(), curPoint.x(), curPoint.y(), true );
+					}
+					else if( correctClick ){
+						glWindowPos2fMESAemulate( lowPoint.x() + ( curPoint.x() - clickPoint.x() ),
+												  height_ - ( lowPoint.y() + ( curPoint.y() - clickPoint.y() ) ) );
+						glDrawPixels( rWidth, rHeight, GL_RGB, GL_UNSIGNED_BYTE, bufferInfo );
+						glWindowPos2fMESAemulate( 0, 0 );
+					}
+					break;
+				case PaintWindow::Cut:
+					if( nClicks < 1 ){
+						glDrawPixels( width_, height_, GL_RGB, GL_UNSIGNED_BYTE, tempInfo );
+						drawRectangle( clickPoint.x(), clickPoint.y(), curPoint.x(), curPoint.y(), true );
+					}
+					else if( correctClick ){
+						glWindowPos2fMESAemulate( lowPoint.x() + ( curPoint.x() - clickPoint.x() ),
+												  height_ - ( lowPoint.y() + ( curPoint.y() - clickPoint.y() ) ) );
+						glDrawPixels( rWidth, rHeight, GL_RGB, GL_UNSIGNED_BYTE, bufferInfo );
+						glWindowPos2fMESAemulate( 0, 0 );
+					}
+					break;
+			}
+		}
+		else{
+			recentlyCleared = false;
 		}
 		if( !pencilActive && !eraserActive && !sprayActive ){
 			glFlush();

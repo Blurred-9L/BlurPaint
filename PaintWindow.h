@@ -55,9 +55,12 @@ class PaintWindow : public QMainWindow{
 		void bucketSelected();
 		void copySelected();
 		void cutSelected();
-		void getFilePath();
+		void getSaveFilePath();
+		void getOpenFilePath();
+		void getUsedFilePath();
 		
 	private:
+		QString lastFile;
 		PaintWidget* paintWidget;
 		QMenu* fileMenu;
 		QToolBar* mainToolBar;
@@ -111,6 +114,7 @@ class PaintWindow : public QMainWindow{
 		QAction* bucketToolAction;
 		QAction* copyToolAction;
 		QAction* cutToolAction;
+		QAction* newFile;
 		QAction* openFile;
 		QAction* saveFile;
 		QAction* saveFileAs;
@@ -127,7 +131,8 @@ class PaintWindow : public QMainWindow{
 	signals:
 		void changeTool( int );
 		void changePolygonSides( int );
-		void sendFilePath( const QString& );
+		void sendSaveFilePath( const QString& );
+		void sendOpenFilePath( const QString& );
 };
 
 #endif //PAINT_WINDOW_H

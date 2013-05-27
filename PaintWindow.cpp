@@ -15,6 +15,8 @@ int PaintWindow::width_ = 500;
 int PaintWindow::height_ = 500;
 
 PaintWindow::PaintWindow(){
+	lastFile = "";
+
 	paintWidget = new PaintWidget;
 	
 	setCentralWidget( paintWidget );
@@ -37,8 +39,12 @@ PaintWindow::PaintWindow(){
 	connect( this, SIGNAL( changeTool( int ) ), paintWidget, SLOT( setSelectedTool( int ) ) );
 	connect( this, SIGNAL( changePolygonSides( int ) ), paintWidget, SLOT( setNSides( int ) ) );
 	connect( colorButtonGroup, SIGNAL( buttonClicked( int ) ), paintWidget, SLOT( setColor( int ) ) );
-	connect( saveFileAs, SIGNAL( triggered() ), this, SLOT( getFilePath() ) );
-	connect( this, SIGNAL( sendFilePath( const QString& ) ), paintWidget, SLOT( saveToFile( const QString& ) ) );
+	connect( newFile, SIGNAL( triggered() ), paintWidget, SLOT( clear() ) );
+	connect( openFile, SIGNAL( triggered() ), this, SLOT( getOpenFilePath() ) );
+	connect( this, SIGNAL( sendOpenFilePath( const QString& ) ), paintWidget, SLOT( loadFromFile( const QString& ) ) );
+	connect( saveFile, SIGNAL( triggered() ), this, SLOT( getUsedFilePath() ) );
+	connect( saveFileAs, SIGNAL( triggered() ), this, SLOT( getSaveFilePath() ) );
+	connect( this, SIGNAL( sendSaveFilePath( const QString& ) ), paintWidget, SLOT( saveToFile( const QString& ) ) );
 	connect( closeWindow, SIGNAL( triggered() ), this, SLOT( close() ) );
 }
 
@@ -126,13 +132,33 @@ void PaintWindow::heptagonSelected(){
 	emit changePolygonSides( 7 );
 }
 
-void PaintWindow::getFilePath(){
+void PaintWindow::getSaveFilePath(){
 	QString filePath;
 	
 	filePath = QFileDialog::getSaveFileName( this, tr( "Save file" ), ".", tr( "Bitmap (*.bmp)" ) );
 	
 	if( !filePath.isEmpty() ){
-		emit sendFilePath( filePath );
+		lastFile = filePath;
+		emit sendSaveFilePath( filePath );
+	}
+}
+
+void PaintWindow::getOpenFilePath(){
+	QString filePath;
+	
+	filePath = QFileDialog::getOpenFileName( this, tr( "Open file" ), ".", tr( "Bitmap (*.bmp)" ) );
+	
+	if( !filePath.isEmpty() ){
+		emit sendOpenFilePath( filePath );
+	}
+}
+
+void PaintWindow::getUsedFilePath(){
+	if( !lastFile.isEmpty() ){
+		emit sendSaveFilePath( lastFile );
+	}
+	else{
+		getSaveFilePath();
 	}
 }
 
@@ -379,6 +405,10 @@ void PaintWindow::createColorToolBar(){
 
 void PaintWindow::createFileMenu(){
 	fileMenu = menuBar() -> addMenu( tr( "File" ) );
+	
+	newFile = new QAction( tr( "New" ), this );
+	newFile -> setStatusTip( tr( "New file" ) );
+	fileMenu -> addAction( newFile );
 	
 	openFile = new QAction( tr( "Open" ), this );
 	openFile -> setStatusTip( tr( "Open file" ) );

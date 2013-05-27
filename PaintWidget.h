@@ -58,7 +58,9 @@ class PaintWidget : public QGLWidget{
 		void setSelectedTool( int t );
 		void setNSides( int n );
 		void setColor( int c );
+		void clear();
 		void saveToFile( const QString& filePath );
+		void loadFromFile( const QString& filePath );
 
 	protected:
 		void initializeGL();
@@ -88,6 +90,7 @@ class PaintWidget : public QGLWidget{
 		bool sprayActive;
 		bool clicked;
 		bool correctClick;
+		bool recentlyCleared;
 		PixelInfo* pixelInfo;
 		PixelInfo* tempInfo;
 		PixelInfo* bufferInfo;
