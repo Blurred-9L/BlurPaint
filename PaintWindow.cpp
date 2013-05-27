@@ -327,6 +327,54 @@ void PaintWindow::createColorToolBar(){
 	colorToolBar -> addWidget( yellowButton );
 	yellowButton -> setAutoRaise( false );
 	colorButtonGroup -> addButton( yellowButton, YELLOW );
+	
+	pinkButton = new QToolButton( colorToolBar ),
+	pinkButton -> setIcon( QIcon( "./Icons/PinkIcon.png" ) );
+	colorToolBar -> addWidget( pinkButton );
+	pinkButton -> setAutoRaise( false );
+	colorButtonGroup -> addButton( pinkButton, PINK );
+	
+	limeButton = new QToolButton( colorToolBar );
+	limeButton -> setIcon( QIcon( "./Icons/LimeIcon.png" ) );
+	colorToolBar -> addWidget( limeButton );
+	limeButton -> setAutoRaise( false );
+	colorButtonGroup -> addButton( limeButton, LIME );
+	
+	orangeButton = new QToolButton( colorToolBar );
+	orangeButton -> setIcon( QIcon( "./Icons/OrangeIcon.png" ) );
+	colorToolBar -> addWidget( orangeButton );
+	orangeButton -> setAutoRaise( false );
+	colorButtonGroup -> addButton( orangeButton, ORANGE );
+	
+	navyButton = new QToolButton( colorToolBar );
+	navyButton -> setIcon( QIcon( "./Icons/NavyIcon.png" ) );
+	colorToolBar -> addWidget( navyButton );
+	navyButton -> setAutoRaise( false );
+	colorButtonGroup -> addButton( navyButton, NAVY );
+	
+	greyButton = new QToolButton( colorToolBar );
+	greyButton -> setIcon( QIcon( "./Icons/GreyIcon.png" ) );
+	colorToolBar -> addWidget( greyButton );
+	greyButton -> setAutoRaise( false );
+	colorButtonGroup -> addButton( greyButton, GREY );
+	
+	purpleButton = new QToolButton( colorToolBar );
+	purpleButton -> setIcon( QIcon( "./Icons/PurpleIcon.png" ) );
+	colorToolBar -> addWidget( purpleButton );
+	purpleButton -> setAutoRaise( false );
+	colorButtonGroup -> addButton( purpleButton, PURPLE );
+	
+	violetButton = new QToolButton( colorToolBar );
+	violetButton -> setIcon( QIcon( "./Icons/VioletIcon.png" ) );
+	colorToolBar -> addWidget( violetButton );
+	violetButton -> setAutoRaise( false );
+	colorButtonGroup -> addButton( violetButton, VIOLET );
+	
+	skyBlueButton = new QToolButton( colorToolBar );
+	skyBlueButton -> setIcon( QIcon( "./Icons/SkyBlueIcon.png" ) );
+	colorToolBar -> addWidget( skyBlueButton );
+	skyBlueButton -> setAutoRaise( false );
+	colorButtonGroup -> addButton( skyBlueButton, SKYBLUE );
 }
 
 void PaintWindow::createFileMenu(){

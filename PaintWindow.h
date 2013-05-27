@@ -87,6 +87,14 @@ class PaintWindow : public QMainWindow{
 		QToolButton* cyanButton;
 		QToolButton* magentaButton;
 		QToolButton* yellowButton;
+		QToolButton* pinkButton;
+		QToolButton* limeButton;
+		QToolButton* orangeButton;
+		QToolButton* navyButton;
+		QToolButton* greyButton;
+		QToolButton* purpleButton;
+		QToolButton* violetButton;
+		QToolButton* skyBlueButton;
 		QAction* lineToolAction;
 		QAction* circleToolAction;
 		QAction* ellipseToolAction;

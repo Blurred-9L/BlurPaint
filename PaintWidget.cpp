@@ -10,6 +10,7 @@
 #include <QString>
 
 #include <cstdio>
+using std::fwrite;
 #include <cmath>
 using std::abs;
 using std::pow;
@@ -23,8 +24,6 @@ using std::rand;
 #include <cstring>
 using std::memset;
 #include <ctime>
-#include <fstream>
-using std::fstream;
 
 #include <GL/glu.h>
 
@@ -42,21 +41,6 @@ typedef struct bmpInfoHeader{
 	long vResolution;					//0
 	unsigned long nColors;				//0
 	unsigned long nImportantColors;		//0	
-	
-	bmpInfoHeader( long w, long h, long r ){
-		infoHeaderSize = 40;
-		width = w;
-		height = h;
-		nPlanes = 1;
-		colorDepth = 24;
-		compressionMethod = 0;
-		imageSize = height * r;
-		hResolution = 2835;
-		vResolution = 2835;
-		nColors = 0;
-		nImportantColors = 0;
-	}
-	
 }bmpInfoHeader;
 
 typedef struct bmpHeader{
@@ -64,14 +48,6 @@ typedef struct bmpHeader{
 	long fileSize;
 	long reservedField;
 	long offset;
-	
-	bmpHeader( bmpInfoHeader* h ){
-		signature = 0x424D;
-		fileSize = 54 + h -> imageSize;
-		reservedField = 0;
-		offset = 54;
-	}
-	
 }bmpHeader;
 
 typedef struct PixelInfo{
@@ -177,6 +153,7 @@ void PaintWidget::setColor( int c ){
 	
 	switch( c ){
 		case BLACK: case WHITE: case RED: case GREEN: case BLUE: case CYAN: case MAGENTA: case YELLOW:
+		case PINK: case LIME: case ORANGE: case NAVY: case GREY: case PURPLE: case VIOLET: case SKYBLUE:
 			r = ( c & 0xFF0000 ) >> 16;
 			g = ( c & 0x00FF00 ) >> 8;
 			b = c & 0x0000FF;
@@ -474,32 +451,50 @@ void PaintWidget::fillArea( int x, int y, PixelInfo bgcolor, PixelInfo fillcolor
 }
 
 void PaintWidget::saveToFile( const QString& filePath ){
-	fstream file;
-	bmpHeader* h1;
-	bmpInfoHeader* h2;
+	FILE* file;
+	bmpHeader h1;
+	bmpInfoHeader h2;
 	PixelInfo* bitmap;
-	unsigned char aux;
 	
-	file.open( filePath.toStdString().c_str(), fstream::out | fstream::binary );
-	if( file.is_open() ){
+	file = fopen( filePath.toStdString().c_str(), "wb" );
+	if( file != NULL ){
 		bitmap = new PixelInfo[ rowSize_ * height_ ];
 		glPixelStorei( GL_PACK_ALIGNMENT, 4 );
 		glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
 		glReadPixels( 0, 0, width_, height_, GL_BGR, GL_UNSIGNED_BYTE, bitmap );
 		glPixelStorei( GL_PACK_ALIGNMENT, 1 );
 		glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
-		h2 = new bmpInfoHeader( width_, height_, rowSize_ );
-		h1 = new bmpHeader( h2 );
-		file.write( reinterpret_cast<char*>( &( h1 -> signature ) ), sizeof( short ) );
-		file.write( reinterpret_cast<char*>( &( h1 -> fileSize ) ), sizeof( long ) );
-		file.write( reinterpret_cast<char*>( &( h1 -> reservedField ) ), sizeof( long ) );
-		file.write( reinterpret_cast<char*>( &( h1 -> offset ) ), sizeof( long ) );
-		file.write( reinterpret_cast<char*>( h2 ), sizeof( bmpInfoHeader ) );
-		file.write( reinterpret_cast<char*>( bitmap ), h2 -> imageSize );
-		file.close();
+		
+		h2.infoHeaderSize = 40;
+		h2.width = width_;
+		h2.height = height_;
+		h2.nPlanes = 1;
+		h2.colorDepth = 24;
+		h2.compressionMethod = 0;
+		h2.imageSize = width_ * 3;
+		while( h2.imageSize % 4 != 0 ){
+			h2.imageSize++;
+		}
+		h2.imageSize = height_;
+		h2.hResolution = 0;
+		h2.vResolution = 0;
+		h2.nColors = 0;
+		h2.nImportantColors = 0;
+		
+		h1.signature = 0x4D42;
+		h1.fileSize = 14 + sizeof( bmpInfoHeader ) + h2.imageSize;
+		h1.reservedField = 0;
+		h1.offset = 54;
+		
+		fwrite( &h1.signature, sizeof( short ), 1, file );
+		fwrite( &h1.fileSize, sizeof( long ), 1, file );
+		fwrite( &h1.reservedField, sizeof( long ), 1, file );
+		fwrite( &h1.offset, sizeof( long ), 1, file );
+		fwrite( &h2, sizeof( bmpInfoHeader ), 1, file );
+		fwrite( bitmap, h2.imageSize, 1, file );
+		
+		fclose( file );
 		delete bitmap;
-		delete h2;
-		delete h1;
 	}
 }
 

@@ -16,6 +16,14 @@
 #define CYAN    0x00FFFF
 #define MAGENTA 0xFF00FF
 #define YELLOW  0xFFFF00
+#define PINK	0xFF3399
+#define LIME	0x669900
+#define ORANGE	0xFF6600
+#define NAVY	0x000066
+#define GREY	0x999999
+#define PURPLE	0x330066
+#define VIOLET	0x660066
+#define SKYBLUE	0x00CCFF
 
 class PaintWindow;
 struct PixelInfo;
