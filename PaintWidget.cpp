@@ -165,6 +165,10 @@ void PaintWidget::setColor( int c ){
 	}
 }
 
+void PaintWidget::setColor( const QColor& c ){
+	color = c;
+}
+
 void PaintWidget::putPixel( int x, int y, const QColor& c ){
 	glColor3f( c.red() / 255.0, c.green() / 255.0, c.blue() / 255.0 );
 	glBegin( GL_POINTS );
@@ -455,6 +459,7 @@ void PaintWidget::clear(){
 	glClearColor( 1, 1, 1, 0.0 );
 	glClear( GL_COLOR_BUFFER_BIT );
 	glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
+	emit resetFilePath();
 	recentlyCleared = true;
 	updateGL();
 }
@@ -792,12 +797,14 @@ void PaintWidget::mouseReleaseEvent( QMouseEvent* event ){
 				glFlush();
 				painter.endNativePainting();
 				painter.end();
+				glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 				break;
 			case PaintWindow::Eraser:
 				eraserActive = false;
 				glFlush();
 				painter.endNativePainting();
 				painter.end();
+				glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 				break;
 			case PaintWindow::Spray:
 				sprayActive = false;
@@ -806,6 +813,7 @@ void PaintWidget::mouseReleaseEvent( QMouseEvent* event ){
 				glFlush();
 				painter.endNativePainting();
 				painter.end();
+				glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 				break;
 			case PaintWindow::Copy:
 				nClicks = ( nClicks + 1 ) % 2;
@@ -830,6 +838,7 @@ void PaintWidget::mouseReleaseEvent( QMouseEvent* event ){
 				}
 				break;
 			default:
+				glReadPixels( 0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, pixelInfo );
 				break;
 		}
 	}

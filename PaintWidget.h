@@ -58,6 +58,7 @@ class PaintWidget : public QGLWidget{
 		void setSelectedTool( int t );
 		void setNSides( int n );
 		void setColor( int c );
+		void setColor( const QColor& c );
 		void clear();
 		void saveToFile( const QString& filePath );
 		void loadFromFile( const QString& filePath );
@@ -112,6 +113,9 @@ class PaintWidget : public QGLWidget{
 		
 		void glWindowPos4fMESAemulate( GLfloat x, GLfloat y, GLfloat z, GLfloat w );
 		void glWindowPos2fMESAemulate( GLfloat x, GLfloat y );
+		
+	signals:
+		void resetFilePath();
 };
 
 #endif //PAINT_WIDGET_H

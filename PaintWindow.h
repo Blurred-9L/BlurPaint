@@ -9,6 +9,7 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QString>
+#include <QColor>
 
 class PaintWidget;
 
@@ -58,11 +59,18 @@ class PaintWindow : public QMainWindow{
 		void getSaveFilePath();
 		void getOpenFilePath();
 		void getUsedFilePath();
+		void resetFilePath();
+		void pickColor();
+		void getInfo();
 		
 	private:
 		QString lastFile;
 		PaintWidget* paintWidget;
 		QMenu* fileMenu;
+		QMenu* toolMenu;
+		QMenu* polygonMenu;
+		QMenu* colorMenu;
+		QMenu* helpMenu;
 		QToolBar* mainToolBar;
 		QToolBar* polygonToolBar;
 		QToolBar* colorToolBar;
@@ -119,6 +127,8 @@ class PaintWindow : public QMainWindow{
 		QAction* saveFile;
 		QAction* saveFileAs;
 		QAction* closeWindow;
+		QAction* pickColorAction;
+		QAction* aboutAction;
 		QButtonGroup* colorButtonGroup;
 		static int width_;
 		static int height_;
@@ -127,12 +137,15 @@ class PaintWindow : public QMainWindow{
 		void createPolygonToolBar();
 		void createColorToolBar();
 		void createFileMenu();
+		void createToolMenu();
+		void createPolygonMenu();
 		
 	signals:
 		void changeTool( int );
 		void changePolygonSides( int );
 		void sendSaveFilePath( const QString& );
 		void sendOpenFilePath( const QString& );
+		void sendColor( const QColor& );
 };
 
 #endif //PAINT_WINDOW_H

@@ -9,7 +9,11 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QString>
+#include <QKeySequence>
 #include <QFileDialog>
+#include <QColorDialog>
+#include <QMessageBox>
+#include <QColor>
 
 int PaintWindow::width_ = 500;
 int PaintWindow::height_ = 500;
@@ -35,6 +39,18 @@ PaintWindow::PaintWindow(){
 	createColorToolBar();
 	
 	createFileMenu();
+	createToolMenu();
+	createPolygonMenu();
+	
+	colorMenu = menuBar() -> addMenu( tr( "Color" ) );
+	pickColorAction = new QAction( tr( "Pick color..." ), this );
+	pickColorAction -> setStatusTip( tr( "Pick color" ) );
+	colorMenu -> addAction( pickColorAction );
+	
+	helpMenu = menuBar() -> addMenu( tr( "Help" ) );
+	aboutAction = new QAction( tr( "About" ), this );
+	aboutAction -> setStatusTip( tr( "About BlurPaint" ) );
+	helpMenu -> addAction( aboutAction );
 	
 	connect( this, SIGNAL( changeTool( int ) ), paintWidget, SLOT( setSelectedTool( int ) ) );
 	connect( this, SIGNAL( changePolygonSides( int ) ), paintWidget, SLOT( setNSides( int ) ) );
@@ -45,6 +61,10 @@ PaintWindow::PaintWindow(){
 	connect( saveFile, SIGNAL( triggered() ), this, SLOT( getUsedFilePath() ) );
 	connect( saveFileAs, SIGNAL( triggered() ), this, SLOT( getSaveFilePath() ) );
 	connect( this, SIGNAL( sendSaveFilePath( const QString& ) ), paintWidget, SLOT( saveToFile( const QString& ) ) );
+	connect( paintWidget, SIGNAL( resetFilePath() ), this, SLOT( resetFilePath() ) );
+	connect( pickColorAction, SIGNAL( triggered() ), this, SLOT( pickColor() ) );
+	connect( this, SIGNAL( sendColor( const QColor& ) ), paintWidget, SLOT( setColor( const QColor& ) ) );
+	connect( aboutAction, SIGNAL( triggered() ), this, SLOT( getInfo() ) );
 	connect( closeWindow, SIGNAL( triggered() ), this, SLOT( close() ) );
 }
 
@@ -149,6 +169,7 @@ void PaintWindow::getOpenFilePath(){
 	filePath = QFileDialog::getOpenFileName( this, tr( "Open file" ), ".", tr( "Bitmap (*.bmp)" ) );
 	
 	if( !filePath.isEmpty() ){
+		lastFile = filePath;
 		emit sendOpenFilePath( filePath );
 	}
 }
@@ -160,6 +181,21 @@ void PaintWindow::getUsedFilePath(){
 	else{
 		getSaveFilePath();
 	}
+}
+
+void PaintWindow::resetFilePath(){
+	lastFile = "";
+}
+
+void PaintWindow::pickColor(){
+	QColor color;
+	
+	color = QColorDialog::getColor( QColor( 255, 255, 255 ), this, tr( "Pick color" ) );
+	emit sendColor( color );
+}
+
+void PaintWindow::getInfo(){
+	QMessageBox::information( this, tr( "About BlurPoint v1.0" ), tr( "Made by: Rodrigo Fuentes Hernandez aka Blurred\nCUCEI" ) ); 
 }
 
 void PaintWindow::createMainToolBar(){
@@ -408,21 +444,52 @@ void PaintWindow::createFileMenu(){
 	
 	newFile = new QAction( tr( "New" ), this );
 	newFile -> setStatusTip( tr( "New file" ) );
+	newFile -> setShortcut( QKeySequence::New );
 	fileMenu -> addAction( newFile );
 	
 	openFile = new QAction( tr( "Open" ), this );
 	openFile -> setStatusTip( tr( "Open file" ) );
+	openFile -> setShortcut( QKeySequence::Open );
 	fileMenu -> addAction( openFile );
 	
 	saveFile = new QAction( tr( "Save" ), this );
 	saveFile -> setStatusTip( tr( "Save file" ) );
+	saveFile -> setShortcut( QKeySequence::Save );
 	fileMenu -> addAction( saveFile );
 	
 	saveFileAs = new QAction( tr( "Save as..." ), this );
 	saveFileAs -> setStatusTip( tr( "Save file as..." ) );
+	saveFileAs -> setShortcut( QKeySequence::SaveAs );
 	fileMenu -> addAction( saveFileAs );
 	
 	closeWindow = new QAction( tr( "Quit" ), this );
 	closeWindow -> setStatusTip( tr( "Close application" ) );
+	closeWindow -> setShortcut( QKeySequence::Close );
 	fileMenu -> addAction( closeWindow );
+}
+
+void PaintWindow::createToolMenu(){
+	toolMenu = menuBar() -> addMenu( tr( "Tools" ) );
+	
+	toolMenu -> addAction( lineToolAction );
+	toolMenu -> addAction( circleToolAction );
+	toolMenu -> addAction( ellipseToolAction );
+	toolMenu -> addAction( splineToolAction );
+	toolMenu -> addAction( pencilToolAction );
+	toolMenu -> addAction( eraserToolAction );
+	toolMenu -> addAction( sprayToolAction );
+	toolMenu -> addAction( bucketToolAction );
+	toolMenu -> addAction( copyToolAction );
+	toolMenu -> addAction( cutToolAction );
+}
+
+void PaintWindow::createPolygonMenu(){
+	polygonMenu = menuBar() -> addMenu( tr( "Polygons" ) );
+	
+	polygonMenu -> addAction( triangleToolAction );
+	polygonMenu -> addAction( squareToolAction );
+	polygonMenu -> addAction( pentagonToolAction );
+	polygonMenu -> addAction( hexagonToolAction );
+	polygonMenu -> addAction( heptagonToolAction );
+	polygonMenu -> addAction( rectangleToolAction );
 }
